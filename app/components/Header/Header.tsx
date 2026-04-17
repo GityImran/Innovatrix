@@ -1,8 +1,11 @@
 import React from 'react';
 import Link from 'next/link';
 import styles from './Header.module.css';
+import { auth } from '@/lib/auth';
 
-export default function Header() {
+export default async function Header() {
+  const session = await auth();
+
   return (
     <header className={styles.header}>
       <div className={`container ${styles.headerContent}`}>
@@ -26,10 +29,14 @@ export default function Header() {
         </div>
 
         <div className={styles.userActions}>
-          <div className={styles.actionItem}>
-            <span className={styles.actionLabel}>Hello, Student</span>
-            <span className={styles.actionBold}>Account & Lists</span>
-          </div>
+          <Link href={session ? "/dashboard" : "/login"} className={styles.actionItem} style={{ textDecoration: 'none' }}>
+            <span className={styles.actionLabel}>
+              {session ? `Hello, ${session.user?.name?.split(' ')[0]}` : "Hello, Sign in"}
+            </span>
+            <span className={styles.actionBold}>
+              {session ? "Dashboard" : "Account & Lists"}
+            </span>
+          </Link>
           <div className={styles.actionItem}>
             <span className={styles.actionLabel}>Returns</span>
             <span className={styles.actionBold}>& Orders</span>
