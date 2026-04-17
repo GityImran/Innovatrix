@@ -2,6 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import styles from './Header.module.css';
 import { auth } from '@/lib/auth';
+import UserAuthDropdown from './UserAuthDropdown';
 
 export default async function Header() {
   const session = await auth();
@@ -29,14 +30,7 @@ export default async function Header() {
         </div>
 
         <div className={styles.userActions}>
-          <Link href={session ? "/dashboard" : "/login"} className={styles.actionItem} style={{ textDecoration: 'none' }}>
-            <span className={styles.actionLabel}>
-              {session ? `Hello, ${session.user?.name?.split(' ')[0]}` : "Hello, Sign in"}
-            </span>
-            <span className={styles.actionBold}>
-              {session ? "Dashboard" : "Account & Lists"}
-            </span>
-          </Link>
+          <UserAuthDropdown session={session} />
           <div className={styles.actionItem}>
             <span className={styles.actionLabel}>Returns</span>
             <span className={styles.actionBold}>& Orders</span>
