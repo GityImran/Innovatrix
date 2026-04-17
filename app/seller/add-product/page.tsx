@@ -165,10 +165,10 @@ export default function AddProductPage() {
   /* ── Helpers ── */
   const setField =
     <T,>(setter: React.Dispatch<React.SetStateAction<T>>, key: keyof FormErrors) =>
-    (value: T) => {
-      setter(value);
-      setErrors((p) => ({ ...p, [key]: undefined }));
-    };
+      (value: T) => {
+        setter(value);
+        setErrors((p) => ({ ...p, [key]: undefined }));
+      };
 
   return (
     <div style={s.page}>
