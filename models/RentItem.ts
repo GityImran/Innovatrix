@@ -2,6 +2,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IRentItem extends Document {
   sellerId: mongoose.Types.ObjectId;
+  sellerDomain: string;
   category: string;
   title: string;
   description: string;
@@ -27,6 +28,7 @@ export interface IRentItem extends Document {
 const RentItemSchema = new Schema<IRentItem>(
   {
     sellerId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    sellerDomain: { type: String, default: "", index: true },
     category: { type: String, required: true },
     title: { type: String, required: true, trim: true },
     description: { type: String, required: true },
@@ -52,6 +54,9 @@ const RentItemSchema = new Schema<IRentItem>(
   },
   { timestamps: true }
 );
+
+// Compound index: domain + recency (for search query)
+RentItemSchema.index({ sellerDomain: 1, createdAt: -1 });
 
 const RentItem: Model<IRentItem> =
   mongoose.models.RentItem ||

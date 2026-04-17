@@ -55,6 +55,12 @@ export async function POST(req: NextRequest) {
     await connectToDatabase();
     const body = await req.json();
 
+    // Extract domain from seller's verified session email (never from client input)
+    const sellerEmail = session.user.email ?? "";
+    const sellerDomain = sellerEmail.includes("@")
+      ? sellerEmail.split("@")[1].toLowerCase()
+      : "";
+
     const { images: rawImages, ...rest } = body;
 
     // Save images to public/uploads/ and store their URL paths in MongoDB
@@ -64,6 +70,7 @@ export async function POST(req: NextRequest) {
       ...rest,
       images,
       sellerId: session.user.id,
+      sellerDomain,
       status: body.status || "active",
     });
 

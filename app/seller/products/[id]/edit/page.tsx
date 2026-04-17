@@ -15,11 +15,11 @@ import React, {
   FormEvent,
 } from "react";
 import { useRouter, useParams } from "next/navigation";
-import {
-  getProductById,
-  updateProduct,
-  type Product,
-} from "@/lib/productStore";
+// import {
+//   getProductById,
+//   updateProduct,
+//   type Product,
+// } from "@/lib/productStore";
 
 type Condition = "new" | "good" | "used" | "";
 type Category =
@@ -76,31 +76,52 @@ export default function EditProductPage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [isDragging, setIsDragging] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  /* ── Pre-fill from store ── */
+  /* ── Fetch from API ── */
   useEffect(() => {
-    const product = getProductById(id);
-    if (!product) { setNotFound(true); setReady(true); return; }
+    async function fetchProduct() {
+      try {
+        setLoading(true);
+        const res = await fetch(`/api/products/${id}`);
+        if (!res.ok) {
+          if (res.status === 404) setNotFound(true);
+          else throw new Error("Failed to fetch product");
+          return;
+        }
 
-    setCategory(product.category as Category);
-    setTitle(product.title);
-    setDescription(product.description);
-    setCondition(product.condition);
-    setOriginalPrice(product.originalPrice?.toString() ?? "");
-    setExpectedPrice(product.expectedPrice.toString());
-    setImages(
-      product.images.map((dataUrl, i) => ({
-        id: `existing-${i}`,
-        dataUrl,
-        isExisting: true,
-      }))
-    );
-    setIsUrgent(product.isUrgent);
-    setIsBundle(product.isBundle);
-    setBundleTitle(product.bundleTitle ?? "");
-    setReady(true);
+        const product = await res.json();
+        setCategory(product.category as Category);
+        setTitle(product.title);
+        setDescription(product.description);
+        setCondition(product.condition);
+        setOriginalPrice(product.originalPrice?.toString() ?? "");
+        setExpectedPrice(product.expectedPrice.toString());
+        setImages(
+          (product.images as string[]).map((dataUrl, i) => ({
+            id: `existing-${i}`,
+            dataUrl,
+            isExisting: true,
+          }))
+        );
+        setIsUrgent(product.isUrgent);
+        setIsBundle(product.isBundle);
+        setBundleTitle(product.bundleTitle ?? "");
+      } catch (err: any) {
+        console.error(err);
+        setError(err.message);
+      } finally {
+        setReady(true);
+        setLoading(false);
+      }
+    }
+
+    if (id) {
+      fetchProduct();
+    }
   }, [id]);
 
   /* ── Image helpers ── */
@@ -170,26 +191,59 @@ export default function EditProductPage() {
     e.preventDefault();
     if (!validate()) return;
     setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 900));
+    try {
+      const res = await fetch(`/api/seller/products/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category,
+          title: title.trim(),
+          description: description.trim(),
+          condition: condition as "new" | "good" | "used",
+          originalPrice: originalPrice ? Number(originalPrice) : undefined,
+          expectedPrice: Number(expectedPrice),
+          images: images.map((i) => i.dataUrl),
+          isUrgent,
+          isBundle,
+          bundleTitle: isBundle ? bundleTitle.trim() : undefined,
+        }),
+      });
 
-    updateProduct(id, {
-      category,
-      title: title.trim(),
-      description: description.trim(),
-      condition: condition as "new" | "good" | "used",
-      originalPrice: originalPrice ? Number(originalPrice) : undefined,
-      expectedPrice: Number(expectedPrice),
-      images: images.map((i) => i.dataUrl),
-      isUrgent,
-      isBundle,
-      bundleTitle: isBundle ? bundleTitle.trim() : undefined,
-    });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to update product");
+      }
 
-    setSubmitting(false);
-    router.push("/seller/products");
+      router.push("/seller/products");
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  if (!ready) return null;
+  if (!ready || loading) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", padding: "8rem" }}>
+        <span style={s.spinner} />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ textAlign: "center", padding: "4rem", color: "#f87171" }}>
+        <h2 style={{ color: "#f8fafc", marginTop: "1rem" }}>Error Loading Product</h2>
+        <p>{error}</p>
+        <button
+          style={{ ...s.btnPrimary, marginTop: "1.5rem", cursor: "pointer", border: "none" }}
+          onClick={() => router.push("/seller/products")}
+        >
+          Back to Listings
+        </button>
+      </div>
+    );
+  }
 
   if (notFound) {
     return (

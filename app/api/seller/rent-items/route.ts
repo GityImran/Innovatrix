@@ -55,12 +55,18 @@ export async function POST(req: NextRequest) {
     await connectToDatabase();
     const body = await req.json();
 
+    // Extract domain from seller's verified session email (never from client input)
+    const sellerEmail = session.user.email ?? "";
+    const sellerDomain = sellerEmail.includes("@")
+      ? sellerEmail.split("@")[1].toLowerCase()
+      : "";
+
     // Normalise pricing field names: form sends pricePerDay/Week/Month,
     // schema stores day/week/month. Support both so nothing breaks.
     const rawPricing = body.pricing ?? {};
     const pricing = {
-      day:   rawPricing.day   ?? rawPricing.pricePerDay,
-      week:  rawPricing.week  ?? rawPricing.pricePerWeek,
+      day: rawPricing.day ?? rawPricing.pricePerDay,
+      week: rawPricing.week ?? rawPricing.pricePerWeek,
       month: rawPricing.month ?? rawPricing.pricePerMonth,
     };
 
@@ -72,8 +78,6 @@ export async function POST(req: NextRequest) {
       till: rawAvail.till ?? rawAvail.availableTill,
     };
 
-    // Strip images — don't save base64 data to MongoDB for the MVP.
-    // Images are preview-only in the browser; use a placeholder when displaying.
     const { images: rawImages, ...rest } = body;
 
     // Save images to public/uploads/ and store their URL paths in MongoDB
@@ -85,6 +89,7 @@ export async function POST(req: NextRequest) {
       availability,
       images,
       sellerId: session.user.id,
+      sellerDomain,
       status: body.status || "active",
     });
 

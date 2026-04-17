@@ -3,6 +3,7 @@ import Link from 'next/link';
 import styles from './Header.module.css';
 import { auth } from '@/lib/auth';
 import UserAuthDropdown from './UserAuthDropdown';
+import SearchForm from './SearchForm';
 
 export default async function Header() {
   const session = await auth();
@@ -16,17 +17,13 @@ export default async function Header() {
             <span className={styles.logoSub}>.edu</span>
           </Link>
         </div>
-        
+
         <div className={styles.searchBar}>
-          <select className={styles.searchSelect}>
-            <option>All</option>
-            <option>Textbooks</option>
-            <option>Electronics</option>
-          </select>
-          <input type="text" className={styles.searchInput} placeholder="Search for textbooks, calculators, bikes..." />
-          <button className={styles.searchButton}>
-            🔍
-          </button>
+          <SearchForm
+            selectClassName={styles.searchSelect}
+            inputClassName={styles.searchInput}
+            buttonClassName={styles.searchButton}
+          />
         </div>
 
         <div className={styles.userActions}>

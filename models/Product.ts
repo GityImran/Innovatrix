@@ -2,6 +2,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IProduct extends Document {
   sellerId: mongoose.Types.ObjectId;
+  sellerDomain: string;
   category: string;
   title: string;
   description: string;
@@ -20,6 +21,7 @@ export interface IProduct extends Document {
 const ProductSchema = new Schema<IProduct>(
   {
     sellerId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    sellerDomain: { type: String, default: "", index: true },
     category: { type: String, required: true },
     title: { type: String, required: true, trim: true },
     description: { type: String, required: true },
@@ -38,6 +40,9 @@ const ProductSchema = new Schema<IProduct>(
   },
   { timestamps: true }
 );
+
+// Compound index: domain + recency (for search query)
+ProductSchema.index({ sellerDomain: 1, createdAt: -1 });
 
 const Product: Model<IProduct> =
   mongoose.models.Product || mongoose.model<IProduct>("Product", ProductSchema);
