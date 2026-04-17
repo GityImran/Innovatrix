@@ -28,16 +28,13 @@ export default function UserAuthDropdown({ session }: UserAuthDropdownProps) {
   }, [isOpen]);
 
   const handleDropdownClick = () => {
-    // If we have a session, we can still show a dropdown (e.g. for Logout/Profile)
-    // Or just let it navigate to dashboard. Let's make it so clicking the whole thing 
-    // opens the menu regardless.
     setIsOpen(!isOpen);
   };
 
   return (
     <div className={styles.dropdownWrapper} ref={dropdownRef}>
-      <div 
-        className={styles.actionItem} 
+      <div
+        className={styles.actionItem}
         style={{ textDecoration: 'none' }}
         onClick={handleDropdownClick}
       >
@@ -55,9 +52,6 @@ export default function UserAuthDropdown({ session }: UserAuthDropdownProps) {
             <>
               <Link href="/seller" className={styles.dropdownItem}>
                 Sell Item
-              </Link>
-              <Link href="/rent" className={styles.dropdownItem}>
-                Rent Item
               </Link>
               <Link href="/api/auth/signout" className={styles.dropdownItem}>
                 Logout

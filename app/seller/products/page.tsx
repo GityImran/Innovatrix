@@ -1,7 +1,6 @@
 /**
  * app/seller/products/page.tsx
- * Listed Products — full grid with image, title, category, condition,
- * price, urgent badge, bundle label, Edit & Delete actions.
+ * Listed Products — tabs for "For Sale" and "For Rent" listings.
  */
 
 "use client";
@@ -9,52 +8,75 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { getProducts, deleteProduct, type Product } from "@/lib/productStore";
+import { getRentItems, deleteRentItem, type RentItem } from "@/lib/rentStore";
 
-const CONDITION_META: Record<
-  string,
-  { label: string; color: string; bg: string }
-> = {
+/* ─── Metadata maps ─────────────────────────────────────────────────────── */
+
+const CONDITION_META: Record<string, { label: string; color: string; bg: string }> = {
   new: { label: "New", color: "#10b981", bg: "rgba(16,185,129,0.12)" },
   good: { label: "Good", color: "#3b82f6", bg: "rgba(59,130,246,0.12)" },
   used: { label: "Used", color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
 };
 
-const STATUS_META: Record<
-  Product["status"],
-  { label: string; color: string; bg: string }
-> = {
+const PRODUCT_STATUS_META: Record<Product["status"], { label: string; color: string; bg: string }> = {
   active: { label: "Active", color: "#10b981", bg: "rgba(16,185,129,0.12)" },
   draft: { label: "Draft", color: "#94a3b8", bg: "rgba(100,116,139,0.12)" },
   sold: { label: "Sold", color: "#ef4444", bg: "rgba(239,68,68,0.12)" },
 };
 
-type FilterTab = "all" | Product["status"];
+const RENT_STATUS_META: Record<RentItem["status"], { label: string; color: string; bg: string }> = {
+  active: { label: "Available", color: "#10b981", bg: "rgba(16,185,129,0.12)" },
+  rented: { label: "Rented", color: "#8b5cf6", bg: "rgba(139,92,246,0.12)" },
+  unavailable: { label: "Unavailable", color: "#ef4444", bg: "rgba(239,68,68,0.12)" },
+};
+
+type ViewMode = "sale" | "rent";
+type SaleFilter = "all" | Product["status"];
+type RentFilter = "all" | RentItem["status"];
+
+/* ─── Page ─────────────────────────────────────────────────────────────────*/
 
 export default function ListedProductsPage() {
+  const [view, setView] = useState<ViewMode>("sale");
+
   const [products, setProducts] = useState<Product[]>([]);
-  const [filter, setFilter] = useState<FilterTab>("all");
+  const [rentItems, setRentItems] = useState<RentItem[]>([]);
+  const [saleFilter, setSaleFilter] = useState<SaleFilter>("all");
+  const [rentFilter, setRentFilter] = useState<RentFilter>("all");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setProducts(getProducts());
+    setRentItems(getRentItems());
     setMounted(true);
   }, []);
 
-  const refresh = () => setProducts(getProducts());
-
-  const handleDelete = (id: string, title: string) => {
-    if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
-    deleteProduct(id);
-    refresh();
+  const refreshAll = () => {
+    setProducts(getProducts());
+    setRentItems(getRentItems());
   };
 
-  const filtered =
-    filter === "all" ? products : products.filter((p) => p.status === filter);
+  const handleDeleteProduct = (id: string, title: string) => {
+    if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
+    deleteProduct(id);
+    refreshAll();
+  };
 
-  const countFor = (tab: FilterTab) =>
-    tab === "all"
-      ? products.length
-      : products.filter((p) => p.status === tab).length;
+  const handleDeleteRent = (id: string, title: string) => {
+    if (!confirm(`Remove "${title}" from rent listings? This cannot be undone.`)) return;
+    deleteRentItem(id);
+    refreshAll();
+  };
+
+  const filteredProducts =
+    saleFilter === "all" ? products : products.filter((p) => p.status === saleFilter);
+  const filteredRentItems =
+    rentFilter === "all" ? rentItems : rentItems.filter((r) => r.status === rentFilter);
+
+  const saleCount = (tab: SaleFilter) =>
+    tab === "all" ? products.length : products.filter((p) => p.status === tab).length;
+  const rentCount = (tab: RentFilter) =>
+    tab === "all" ? rentItems.length : rentItems.filter((r) => r.status === tab).length;
 
   if (!mounted) return null;
 
@@ -64,199 +86,330 @@ export default function ListedProductsPage() {
       {/* ── Top Row ── */}
       <div style={s.topRow}>
         <div>
-          <h1 style={s.title}>Listed Products</h1>
-          <p style={s.subtitle}>
-            {products.length} product{products.length !== 1 ? "s" : ""} in your store
+          <h1 style={s.pageTitle}>My Listings</h1>
+          <p style={s.pageSub}>
+            {products.length} for sale · {rentItems.length} for rent
           </p>
         </div>
-        <Link href="/seller/add-product" style={s.addBtn}>
-          + Add Product
-        </Link>
+        <div style={{ display: "flex", gap: "0.6rem" }}>
+          <Link href="/seller/rent" style={{ ...s.actionBtn, ...s.rentBtn }}>
+            🔄 List for Rent
+          </Link>
+          <Link href="/seller/add-product" style={{ ...s.actionBtn, ...s.saleBtn }}>
+            + Add Product
+          </Link>
+        </div>
       </div>
 
-      {/* ── Filter Tabs ── */}
-      <div style={s.tabRow}>
-        {(["all", "active", "draft", "sold"] as const).map((tab) => (
-          <button
-            key={tab}
-            style={{ ...s.tab, ...(filter === tab ? s.tabActive : s.tabInactive) }}
-            onClick={() => setFilter(tab)}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            <span
-              style={{
-                ...s.tabBadge,
-                ...(filter === tab
-                  ? { backgroundColor: "#f59e0b", color: "#000" }
-                  : { backgroundColor: "#1f1f1f", color: "#64748b" }),
-              }}
-            >
-              {countFor(tab)}
-            </span>
-          </button>
-        ))}
+      {/* ── View Switcher ── */}
+      <div style={s.viewSwitcher}>
+        <button
+          id="lp-view-sale"
+          style={{
+            ...s.viewBtn,
+            ...(view === "sale" ? s.viewBtnActive : s.viewBtnInactive),
+          }}
+          onClick={() => setView("sale")}
+        >
+          🏷️ For Sale
+          <span style={{ ...s.viewBadge, ...(view === "sale" ? s.viewBadgeActive : {}) }}>
+            {products.length}
+          </span>
+        </button>
+        <button
+          id="lp-view-rent"
+          style={{
+            ...s.viewBtn,
+            ...(view === "rent" ? s.viewBtnActive : s.viewBtnInactive),
+          }}
+          onClick={() => setView("rent")}
+        >
+          🔄 For Rent
+          <span style={{ ...s.viewBadge, ...(view === "rent" ? s.viewBadgeActive : {}) }}>
+            {rentItems.length}
+          </span>
+        </button>
       </div>
 
-      {/* ── Empty State ── */}
-      {filtered.length === 0 && (
-        <div style={s.empty}>
-          <div style={{ fontSize: "3.5rem", marginBottom: "0.75rem" }}>📭</div>
-          <p style={s.emptyTitle}>
-            {filter === "all" ? "No products yet" : `No ${filter} products`}
-          </p>
-          <p style={s.emptyDesc}>
-            {filter === "all"
-              ? "Add your first item and start selling on campus."
-              : `Switch to another tab to see your other listings.`}
-          </p>
-          {filter === "all" && (
-            <Link href="/seller/add-product" style={s.emptyBtn}>
-              + List Your First Item
-            </Link>
+      {/* ══════════════ FOR SALE VIEW ══════════════ */}
+      {view === "sale" && (
+        <>
+          {/* Status filter tabs */}
+          <div style={s.tabRow}>
+            {(["all", "active", "draft", "sold"] as const).map((tab) => (
+              <button
+                key={tab}
+                style={{ ...s.tab, ...(saleFilter === tab ? s.tabActive : s.tabInactive) }}
+                onClick={() => setSaleFilter(tab)}
+              >
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                <span
+                  style={{
+                    ...s.tabBadge,
+                    ...(saleFilter === tab
+                      ? { backgroundColor: "#f59e0b", color: "#000" }
+                      : { backgroundColor: "#1f1f1f", color: "#64748b" }),
+                  }}
+                >
+                  {saleCount(tab)}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {filteredProducts.length === 0 ? (
+            <EmptyState
+              icon="📭"
+              title={saleFilter === "all" ? "No products yet" : `No ${saleFilter} products`}
+              desc={
+                saleFilter === "all"
+                  ? "Add your first item and start selling on campus."
+                  : "Switch to another tab to see your other listings."
+              }
+              action={
+                saleFilter === "all"
+                  ? { label: "+ List Your First Item", href: "/seller/add-product" }
+                  : undefined
+              }
+            />
+          ) : (
+            <div style={s.grid}>
+              {filteredProducts.map((product) => {
+                const cond = CONDITION_META[product.condition] ?? {
+                  label: product.condition,
+                  color: "#94a3b8",
+                  bg: "rgba(148,163,184,0.1)",
+                };
+                const status = PRODUCT_STATUS_META[product.status];
+                return (
+                  <div key={product.id} style={s.card}>
+                    <div style={s.imgWrap}>
+                      {product.images.length > 0 ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={product.images[0]} alt={product.title} style={s.img} />
+                      ) : (
+                        <div style={s.imgPlaceholder}>
+                          <span style={{ fontSize: "3rem" }}>📦</span>
+                          <span style={s.imgPlaceholderText}>No image</span>
+                        </div>
+                      )}
+                      <div style={s.overlayTop}>
+                        {product.isUrgent && <span style={s.urgentBadge}>🔥 Urgent</span>}
+                        {product.isBundle && <span style={s.bundleBadge}>📦 Bundle</span>}
+                      </div>
+                      <div style={s.overlayBottom}>
+                        <span style={{ ...s.statusBadge, backgroundColor: status.bg, color: status.color }}>
+                          {status.label}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={s.body}>
+                      <div style={s.metaRow}>
+                        <span style={s.categoryChip}>{product.category}</span>
+                        <span style={{ ...s.conditionChip, backgroundColor: cond.bg, color: cond.color }}>
+                          {cond.label}
+                        </span>
+                      </div>
+                      <p style={s.cardTitle}>{product.title}</p>
+                      {product.isBundle && product.bundleTitle && (
+                        <p style={s.bundleSubtitle}>📦 {product.bundleTitle}</p>
+                      )}
+                      <div style={s.priceRow}>
+                        <span style={s.price}>₹{product.expectedPrice.toLocaleString("en-IN")}</span>
+                        {product.originalPrice && (
+                          <>
+                            <span style={s.origPrice}>₹{product.originalPrice.toLocaleString("en-IN")}</span>
+                            {product.originalPrice > product.expectedPrice && (
+                              <span style={s.savingBadge}>
+                                {Math.round((1 - product.expectedPrice / product.originalPrice) * 100)}% off
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </div>
+                      <p style={s.date}>
+                        Listed {new Date(product.createdAt).toLocaleDateString("en-IN", {
+                          day: "numeric", month: "short", year: "numeric",
+                        })}
+                      </p>
+                    </div>
+
+                    <div style={s.cardActions}>
+                      <Link href={`/seller/products/${product.id}/edit`} style={s.editBtn}>✏️ Edit</Link>
+                      <button style={s.deleteBtn} onClick={() => handleDeleteProduct(product.id, product.title)}>
+                        🗑 Delete
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
-        </div>
+        </>
       )}
 
-      {/* ── Product Grid ── */}
-      {filtered.length > 0 && (
-        <div style={s.grid}>
-          {filtered.map((product) => {
-            const cond = CONDITION_META[product.condition] ?? {
-              label: product.condition,
-              color: "#94a3b8",
-              bg: "rgba(148,163,184,0.1)",
-            };
-            const status = STATUS_META[product.status];
+      {/* ══════════════ FOR RENT VIEW ══════════════ */}
+      {view === "rent" && (
+        <>
+          {/* Status filter tabs */}
+          <div style={s.tabRow}>
+            {(["all", "active", "rented", "unavailable"] as const).map((tab) => (
+              <button
+                key={tab}
+                style={{ ...s.tab, ...(rentFilter === tab ? s.tabActive : s.tabInactive) }}
+                onClick={() => setRentFilter(tab)}
+              >
+                {tab === "all" ? "All" : RENT_STATUS_META[tab].label}
+                <span
+                  style={{
+                    ...s.tabBadge,
+                    ...(rentFilter === tab
+                      ? { backgroundColor: "#f59e0b", color: "#000" }
+                      : { backgroundColor: "#1f1f1f", color: "#64748b" }),
+                  }}
+                >
+                  {rentCount(tab)}
+                </span>
+              </button>
+            ))}
+          </div>
 
-            return (
-              <div key={product.id} style={s.card}>
-
-                {/* ── Image ── */}
-                <div style={s.imgWrap}>
-                  {product.images.length > 0 ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={product.images[0]}
-                      alt={product.title}
-                      style={s.img}
-                    />
-                  ) : (
-                    <div style={s.imgPlaceholder}>
-                      <span style={{ fontSize: "3rem" }}>📦</span>
-                      <span style={s.imgPlaceholderText}>No image</span>
-                    </div>
-                  )}
-
-                  {/* Overlay badges */}
-                  <div style={s.overlayTop}>
-                    {product.isUrgent && (
-                      <span style={s.urgentBadge}>🔥 Urgent</span>
-                    )}
-                    {product.isBundle && (
-                      <span style={s.bundleBadge}>📦 Bundle</span>
-                    )}
-                  </div>
-                  <div style={s.overlayBottom}>
-                    <span
-                      style={{
-                        ...s.statusBadge,
-                        backgroundColor: status.bg,
-                        color: status.color,
-                      }}
-                    >
-                      {status.label}
-                    </span>
-                  </div>
-                </div>
-
-                {/* ── Body ── */}
-                <div style={s.body}>
-
-                  {/* Category + Condition row */}
-                  <div style={s.metaRow}>
-                    <span style={s.categoryChip}>{product.category}</span>
-                    <span
-                      style={{
-                        ...s.conditionChip,
-                        backgroundColor: cond.bg,
-                        color: cond.color,
-                      }}
-                    >
-                      {cond.label}
-                    </span>
-                  </div>
-
-                  {/* Title */}
-                  <p style={s.productTitle}>{product.title}</p>
-
-                  {/* Bundle sub-title */}
-                  {product.isBundle && product.bundleTitle && (
-                    <p style={s.bundleTitle}>
-                      <span style={s.bundleIcon}>📦</span> {product.bundleTitle}
-                    </p>
-                  )}
-
-                  {/* Price */}
-                  <div style={s.priceRow}>
-                    <span style={s.price}>₹{product.expectedPrice.toLocaleString("en-IN")}</span>
-                    {product.originalPrice && (
-                      <>
-                        <span style={s.origPrice}>
-                          ₹{product.originalPrice.toLocaleString("en-IN")}
+          {filteredRentItems.length === 0 ? (
+            <EmptyState
+              icon="🔄"
+              title={rentFilter === "all" ? "No rent listings yet" : `No ${rentFilter} rent items`}
+              desc={
+                rentFilter === "all"
+                  ? "List your first item for rent and start earning."
+                  : "Switch to another tab to see your other rent listings."
+              }
+              action={
+                rentFilter === "all"
+                  ? { label: "🔄 List Your First Rent Item", href: "/seller/rent" }
+                  : undefined
+              }
+            />
+          ) : (
+            <div style={s.grid}>
+              {filteredRentItems.map((item) => {
+                const cond = CONDITION_META[item.condition] ?? {
+                  label: item.condition, color: "#94a3b8", bg: "rgba(148,163,184,0.1)",
+                };
+                const status = RENT_STATUS_META[item.status];
+                return (
+                  <div key={item.id} style={s.card}>
+                    <div style={s.imgWrap}>
+                      {item.images.length > 0 ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={item.images[0]} alt={item.title} style={s.img} />
+                      ) : (
+                        <div style={s.imgPlaceholder}>
+                          <span style={{ fontSize: "3rem" }}>🔄</span>
+                          <span style={s.imgPlaceholderText}>No image</span>
+                        </div>
+                      )}
+                      <div style={s.overlayTop}>
+                        {item.isUrgent && <span style={s.urgentBadge}>🔥 Urgent</span>}
+                        {item.allowNegotiation && <span style={s.negotiateBadge}>🤝 Negotiable</span>}
+                      </div>
+                      <div style={s.overlayBottom}>
+                        <span style={{ ...s.statusBadge, backgroundColor: status.bg, color: status.color }}>
+                          {status.label}
                         </span>
-                        {product.originalPrice > product.expectedPrice && (
-                          <span style={s.savingBadge}>
-                            {Math.round(
-                              (1 - product.expectedPrice / product.originalPrice) * 100
-                            )}
-                            % off
-                          </span>
+                      </div>
+                      {/* Rent label */}
+                      <div style={s.overlayTopRight}>
+                        <span style={s.rentLabel}>FOR RENT</span>
+                      </div>
+                    </div>
+
+                    <div style={s.body}>
+                      <div style={s.metaRow}>
+                        <span style={s.categoryChip}>{item.category}</span>
+                        <span style={{ ...s.conditionChip, backgroundColor: cond.bg, color: cond.color }}>
+                          {cond.label}
+                        </span>
+                      </div>
+                      <p style={s.cardTitle}>{item.title}</p>
+
+                      {/* Rent pricing */}
+                      <div style={s.priceRow}>
+                        <span style={s.price}>₹{item.pricing.pricePerDay}/day</span>
+                        {item.pricing.pricePerWeek && (
+                          <span style={s.priceAlt}>₹{item.pricing.pricePerWeek}/wk</span>
                         )}
-                      </>
-                    )}
+                        {item.pricing.pricePerMonth && (
+                          <span style={s.priceAlt}>₹{item.pricing.pricePerMonth}/mo</span>
+                        )}
+                      </div>
+
+                      {/* Availability */}
+                      <p style={s.availText}>
+                        📅 {item.availability.availableFrom} → {item.availability.availableTill}
+                      </p>
+
+                      {item.securityDeposit && (
+                        <p style={s.depositText}>
+                          🔒 Deposit: ₹{item.securityDeposit.toLocaleString("en-IN")}
+                        </p>
+                      )}
+
+                      <p style={s.date}>
+                        Listed {new Date(item.createdAt).toLocaleDateString("en-IN", {
+                          day: "numeric", month: "short", year: "numeric",
+                        })}
+                      </p>
+                    </div>
+
+                    <div style={s.cardActions}>
+                      <button style={s.deleteBtn} onClick={() => handleDeleteRent(item.id, item.title)}>
+                        🗑 Remove
+                      </button>
+                    </div>
                   </div>
-
-                  {/* Listed date */}
-                  <p style={s.date}>
-                    Listed{" "}
-                    {new Date(product.createdAt).toLocaleDateString("en-IN", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </p>
-                </div>
-
-                {/* ── Actions ── */}
-                <div style={s.actions}>
-                  <Link
-                    href={`/seller/products/${product.id}/edit`}
-                    style={s.editBtn}
-                  >
-                    ✏️ Edit
-                  </Link>
-                  <button
-                    style={s.deleteBtn}
-                    onClick={() => handleDelete(product.id, product.title)}
-                  >
-                    🗑 Delete
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
 }
 
-/* ─── Styles ─── */
+/* ─── Empty state helper ────────────────────────────────────────────────── */
+function EmptyState({
+  icon,
+  title,
+  desc,
+  action,
+}: {
+  icon: string;
+  title: string;
+  desc: string;
+  action?: { label: string; href: string };
+}) {
+  return (
+    <div style={s.empty}>
+      <div style={{ fontSize: "3.5rem", marginBottom: "0.75rem" }}>{icon}</div>
+      <p style={s.emptyTitle}>{title}</p>
+      <p style={s.emptyDesc}>{desc}</p>
+      {action && (
+        <Link href={action.href} style={s.emptyBtn}>
+          {action.label}
+        </Link>
+      )}
+    </div>
+  );
+}
+
+/* ─── Styles ─────────────────────────────────────────────────────────────── */
 const s: Record<string, React.CSSProperties> = {
   page: {
     display: "flex",
     flexDirection: "column",
-    gap: "1.5rem",
+    gap: "1.25rem",
     maxWidth: "1100px",
     margin: "0 auto",
   },
@@ -267,32 +420,78 @@ const s: Record<string, React.CSSProperties> = {
     flexWrap: "wrap",
     gap: "1rem",
   },
-  title: {
+  pageTitle: {
     fontSize: "1.5rem",
     fontWeight: 800,
     color: "#f8fafc",
     letterSpacing: "-0.02em",
+    margin: 0,
   },
-  subtitle: {
-    fontSize: "0.8rem",
-    color: "#64748b",
-    marginTop: "0.2rem",
-  },
-  addBtn: {
-    padding: "0.65rem 1.25rem",
-    backgroundColor: "#f59e0b",
-    color: "#000",
+  pageSub: { fontSize: "0.8rem", color: "#64748b", marginTop: "0.2rem" },
+
+  /* action buttons */
+  actionBtn: {
+    padding: "0.6rem 1.1rem",
     borderRadius: "10px",
     fontWeight: 700,
-    fontSize: "0.875rem",
+    fontSize: "0.82rem",
     textDecoration: "none",
     whiteSpace: "nowrap",
   },
-  tabRow: {
-    display: "flex",
-    gap: "0.5rem",
-    flexWrap: "wrap",
+  saleBtn: { backgroundColor: "#f59e0b", color: "#000" },
+  rentBtn: {
+    backgroundColor: "transparent",
+    border: "1px solid rgba(245,158,11,0.4)",
+    color: "#f59e0b",
   },
+
+  /* view switcher */
+  viewSwitcher: {
+    display: "flex",
+    gap: "0",
+    backgroundColor: "#111",
+    border: "1px solid #1f1f1f",
+    borderRadius: "12px",
+    padding: "4px",
+    width: "fit-content",
+  },
+  viewBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.45rem",
+    padding: "0.5rem 1.25rem",
+    borderRadius: "9px",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "0.85rem",
+    fontWeight: 700,
+    fontFamily: "inherit",
+    transition: "all 0.2s",
+  },
+  viewBtnActive: {
+    backgroundColor: "#f59e0b",
+    color: "#000",
+    boxShadow: "0 2px 8px rgba(245,158,11,0.25)",
+  },
+  viewBtnInactive: { backgroundColor: "transparent", color: "#64748b" },
+  viewBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: "20px",
+    height: "18px",
+    padding: "0 5px",
+    borderRadius: "9px",
+    fontSize: "0.65rem",
+    fontWeight: 700,
+    backgroundColor: "#1f1f1f",
+    color: "#64748b",
+    transition: "all 0.2s",
+  },
+  viewBadgeActive: { backgroundColor: "rgba(0,0,0,0.25)", color: "#000" },
+
+  /* status filter tabs */
+  tabRow: { display: "flex", gap: "0.5rem", flexWrap: "wrap" },
   tab: {
     display: "flex",
     alignItems: "center",
@@ -312,11 +511,7 @@ const s: Record<string, React.CSSProperties> = {
     border: "1px solid rgba(245,158,11,0.3)",
     color: "#f59e0b",
   },
-  tabInactive: {
-    backgroundColor: "#121212",
-    border: "1px solid #1f1f1f",
-    color: "#64748b",
-  },
+  tabInactive: { backgroundColor: "#121212", border: "1px solid #1f1f1f", color: "#64748b" },
   tabBadge: {
     display: "inline-flex",
     alignItems: "center",
@@ -328,7 +523,8 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: "0.65rem",
     fontWeight: 700,
   },
-  /* Empty */
+
+  /* empty */
   empty: {
     textAlign: "center",
     padding: "4rem 2rem",
@@ -339,18 +535,8 @@ const s: Record<string, React.CSSProperties> = {
     flexDirection: "column",
     alignItems: "center",
   },
-  emptyTitle: {
-    fontSize: "1.05rem",
-    fontWeight: 700,
-    color: "#f8fafc",
-    margin: "0 0 0.4rem",
-  },
-  emptyDesc: {
-    fontSize: "0.85rem",
-    color: "#64748b",
-    maxWidth: "300px",
-    margin: "0 auto 1.5rem",
-  },
+  emptyTitle: { fontSize: "1.05rem", fontWeight: 700, color: "#f8fafc", margin: "0 0 0.4rem" },
+  emptyDesc: { fontSize: "0.85rem", color: "#64748b", maxWidth: "300px", margin: "0 auto 1.5rem" },
   emptyBtn: {
     padding: "0.65rem 1.5rem",
     backgroundColor: "#f59e0b",
@@ -360,13 +546,15 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: "0.875rem",
     textDecoration: "none",
   },
-  /* Grid */
+
+  /* grid */
   grid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(270px, 1fr))",
     gap: "1.1rem",
   },
-  /* Card */
+
+  /* card */
   card: {
     backgroundColor: "#121212",
     border: "1px solid #1f1f1f",
@@ -374,9 +562,10 @@ const s: Record<string, React.CSSProperties> = {
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
-    transition: "border-color 0.2s, transform 0.15s",
+    transition: "border-color 0.2s",
   },
-  /* Image */
+
+  /* image */
   imgWrap: {
     position: "relative",
     height: "170px",
@@ -384,12 +573,7 @@ const s: Record<string, React.CSSProperties> = {
     overflow: "hidden",
     flexShrink: 0,
   },
-  img: {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-    display: "block",
-  },
+  img: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
   imgPlaceholder: {
     width: "100%",
     height: "100%",
@@ -400,10 +584,8 @@ const s: Record<string, React.CSSProperties> = {
     gap: "0.35rem",
     color: "#374151",
   },
-  imgPlaceholderText: {
-    fontSize: "0.7rem",
-    color: "#374151",
-  },
+  imgPlaceholderText: { fontSize: "0.7rem", color: "#374151" },
+
   overlayTop: {
     position: "absolute",
     top: "8px",
@@ -412,11 +594,9 @@ const s: Record<string, React.CSSProperties> = {
     gap: "0.35rem",
     flexWrap: "wrap",
   },
-  overlayBottom: {
-    position: "absolute",
-    bottom: "8px",
-    right: "8px",
-  },
+  overlayTopRight: { position: "absolute", top: "8px", right: "8px" },
+  overlayBottom: { position: "absolute", bottom: "8px", right: "8px" },
+
   urgentBadge: {
     backgroundColor: "rgba(239,68,68,0.92)",
     color: "#fff",
@@ -435,6 +615,25 @@ const s: Record<string, React.CSSProperties> = {
     padding: "2px 7px",
     backdropFilter: "blur(4px)",
   },
+  negotiateBadge: {
+    backgroundColor: "rgba(16,185,129,0.85)",
+    color: "#fff",
+    fontSize: "0.6rem",
+    fontWeight: 800,
+    borderRadius: "5px",
+    padding: "2px 7px",
+    backdropFilter: "blur(4px)",
+  },
+  rentLabel: {
+    backgroundColor: "rgba(139,92,246,0.9)",
+    color: "#fff",
+    fontSize: "0.55rem",
+    fontWeight: 800,
+    letterSpacing: "0.05em",
+    borderRadius: "5px",
+    padding: "2px 6px",
+    backdropFilter: "blur(4px)",
+  },
   statusBadge: {
     fontSize: "0.6rem",
     fontWeight: 700,
@@ -442,20 +641,16 @@ const s: Record<string, React.CSSProperties> = {
     padding: "2px 8px",
     backdropFilter: "blur(4px)",
   },
-  /* Body */
+
+  /* body */
   body: {
     padding: "0.9rem 1rem",
     display: "flex",
     flexDirection: "column",
-    gap: "0.4rem",
+    gap: "0.35rem",
     flex: 1,
   },
-  metaRow: {
-    display: "flex",
-    gap: "0.4rem",
-    flexWrap: "wrap",
-    alignItems: "center",
-  },
+  metaRow: { display: "flex", gap: "0.4rem", flexWrap: "wrap", alignItems: "center" },
   categoryChip: {
     fontSize: "0.68rem",
     fontWeight: 700,
@@ -465,13 +660,8 @@ const s: Record<string, React.CSSProperties> = {
     padding: "1px 7px",
     border: "1px solid rgba(148,163,184,0.15)",
   },
-  conditionChip: {
-    fontSize: "0.68rem",
-    fontWeight: 700,
-    borderRadius: "5px",
-    padding: "1px 7px",
-  },
-  productTitle: {
+  conditionChip: { fontSize: "0.68rem", fontWeight: 700, borderRadius: "5px", padding: "1px 7px" },
+  cardTitle: {
     fontSize: "0.9rem",
     fontWeight: 700,
     color: "#f8fafc",
@@ -482,38 +672,18 @@ const s: Record<string, React.CSSProperties> = {
     WebkitBoxOrient: "vertical",
     overflow: "hidden",
   },
-  bundleTitle: {
+  bundleSubtitle: {
     fontSize: "0.72rem",
     color: "#64748b",
     margin: 0,
-    display: "flex",
-    alignItems: "center",
-    gap: "0.3rem",
     overflow: "hidden",
     whiteSpace: "nowrap",
     textOverflow: "ellipsis",
   },
-  bundleIcon: {
-    flexShrink: 0,
-  },
-  priceRow: {
-    display: "flex",
-    alignItems: "baseline",
-    gap: "0.5rem",
-    flexWrap: "wrap",
-    marginTop: "0.1rem",
-  },
-  price: {
-    fontSize: "1.15rem",
-    fontWeight: 800,
-    color: "#f59e0b",
-    lineHeight: 1,
-  },
-  origPrice: {
-    fontSize: "0.75rem",
-    color: "#4b5563",
-    textDecoration: "line-through",
-  },
+  priceRow: { display: "flex", alignItems: "baseline", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.1rem" },
+  price: { fontSize: "1.1rem", fontWeight: 800, color: "#f59e0b", lineHeight: 1 },
+  priceAlt: { fontSize: "0.72rem", color: "#6b7280" },
+  origPrice: { fontSize: "0.75rem", color: "#4b5563", textDecoration: "line-through" },
   savingBadge: {
     fontSize: "0.62rem",
     fontWeight: 700,
@@ -522,18 +692,12 @@ const s: Record<string, React.CSSProperties> = {
     borderRadius: "4px",
     padding: "1px 5px",
   },
-  date: {
-    fontSize: "0.68rem",
-    color: "#374151",
-    margin: 0,
-    marginTop: "0.2rem",
-  },
-  /* Actions */
-  actions: {
-    display: "flex",
-    gap: "0.5rem",
-    padding: "0 0.9rem 0.9rem",
-  },
+  availText: { fontSize: "0.7rem", color: "#6b7280", margin: 0 },
+  depositText: { fontSize: "0.7rem", color: "#94a3b8", margin: 0 },
+  date: { fontSize: "0.68rem", color: "#374151", margin: 0, marginTop: "0.15rem" },
+
+  /* card actions */
+  cardActions: { display: "flex", gap: "0.5rem", padding: "0 0.9rem 0.9rem" },
   editBtn: {
     flex: 1,
     textAlign: "center",

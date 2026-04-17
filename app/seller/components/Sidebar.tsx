@@ -8,6 +8,7 @@ import { signOut } from "next-auth/react";
 const NAV_ITEMS = [
   { href: "/seller", label: "Dashboard", icon: "📊" },
   { href: "/seller/add-product", label: "Add Product", icon: "➕" },
+  { href: "/seller/rent", label: "Rent Item", icon: "🔄" },
   { href: "/seller/products", label: "Listed Products", icon: "📦" },
   { href: "/seller/orders", label: "Orders", icon: "🛒" },
   { href: "/seller/earnings", label: "Earnings", icon: "💰" },
