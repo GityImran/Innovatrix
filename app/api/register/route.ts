@@ -22,14 +22,14 @@ import User from "@/models/User";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, password } = body;
+    const { name, email, college, password } = body;
 
     /* -------------------------------------------------------------- */
     // 1. Input Validation
     /* -------------------------------------------------------------- */
-    if (!name || !email || !password) {
+    if (!name || !email || !college || !password) {
       return NextResponse.json(
-        { error: "Name, email and password are required" },
+        { error: "Name, email, college and password are required" },
         { status: 400 }
       );
     }
@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
     const newUser = await User.create({
       name: name.trim(),
       email: email.toLowerCase().trim(),
+      college: college.trim(),
       password: hashedPassword,
     });
 
@@ -100,6 +101,7 @@ export async function POST(request: NextRequest) {
           id: newUser._id.toString(),
           name: newUser.name,
           email: newUser.email,
+          college: newUser.college,
           createdAt: newUser.createdAt,
         },
       },

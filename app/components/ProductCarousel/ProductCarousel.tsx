@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import styles from './ProductCarousel.module.css';
 
 export default function ProductCarousel({ title, products }: { title: string, products: any[] }) {
@@ -12,7 +13,7 @@ export default function ProductCarousel({ title, products }: { title: string, pr
         
         <div className={styles.carouselRow}>
           {products.map((p, idx) => (
-            <div key={idx} className={styles.productCard}>
+            <Link href={`/product/${p.id}`} key={p.id || idx} className={styles.productCard} style={{ textDecoration: 'none', color: 'inherit' }}>
               <div className={styles.imageWrapper}>
                 <div className={styles.placeholderImg} style={{ backgroundColor: p.color }}>
                   {p.emoji}
@@ -34,7 +35,7 @@ export default function ProductCarousel({ title, products }: { title: string, pr
                 </div>
                 <button className={styles.addToCartBtn}>Add to Cart</button>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>

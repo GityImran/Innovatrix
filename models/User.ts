@@ -12,6 +12,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 export interface IUser extends Document {
   name: string;
   email: string;       // College email — must be unique
+  college: string;     // Must be from the approved list
   password: string;    // Stored as bcrypt hash — NEVER plain text
   createdAt: Date;
 }
@@ -38,6 +39,11 @@ const UserSchema = new Schema<IUser>(
         /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
         "Please provide a valid email address",
       ],
+    },
+  college: {
+      type: String,
+      required: [true, "College name is required"],
+      trim: true,
     },
     password: {
       type: String,

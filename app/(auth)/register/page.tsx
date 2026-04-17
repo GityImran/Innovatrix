@@ -6,7 +6,7 @@
 
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -15,11 +15,20 @@ export default function RegisterPage() {
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [college, setCollege] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [collegesList, setCollegesList] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetch('/colleges.json')
+      .then(res => res.json())
+      .then(data => setCollegesList(data))
+      .catch(err => console.error("Could not load colleges list", err));
+  }, []);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -38,7 +47,7 @@ export default function RegisterPage() {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, college, password }),
       });
 
       const data = await res.json();
@@ -163,6 +172,27 @@ export default function RegisterPage() {
               onFocus={(e) => Object.assign(e.target.style, styles.inputFocus)}
               onBlur={(e) => Object.assign(e.target.style, styles.inputBlur)}
             />
+          </div>
+
+          {/* College Dropdown */}
+          <div style={styles.fieldGroup}>
+            <label htmlFor="register-college" style={styles.label}>
+              College Name
+            </label>
+            <select
+              id="register-college"
+              value={college}
+              onChange={(e) => setCollege(e.target.value)}
+              required
+              style={styles.input}
+              onFocus={(e) => Object.assign(e.target.style, styles.inputFocus)}
+              onBlur={(e) => Object.assign(e.target.style, styles.inputBlur)}
+            >
+              <option value="" disabled>Select your college</option>
+              {collegesList.map((c, idx) => (
+                <option key={idx} value={c}>{c}</option>
+              ))}
+            </select>
           </div>
 
           {/* Submit */}
