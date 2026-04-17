@@ -1,14 +1,46 @@
-/**
- * app/seller/products/page.tsx
- * Listed Products — tabs for "For Sale" and "For Rent" listings.
- */
-
 "use client";
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { getProducts, deleteProduct, type Product } from "@/lib/productStore";
-import { getRentItems, deleteRentItem, type RentItem } from "@/lib/rentStore";
+
+interface Product {
+  _id: string;
+  category: string;
+  title: string;
+  description: string;
+  condition: "new" | "good" | "used";
+  originalPrice?: number;
+  expectedPrice: number;
+  images: string[];
+  isUrgent: boolean;
+  isBundle: boolean;
+  bundleTitle?: string;
+  status: "active" | "draft" | "sold";
+  createdAt: string;
+}
+
+interface RentItem {
+  _id: string;
+  category: string;
+  title: string;
+  description: string;
+  condition: "new" | "good" | "used";
+  pricing: {
+    day: number;
+    week?: number;
+    month?: number;
+  };
+  availability: {
+    from: string;
+    till: string;
+  };
+  securityDeposit?: number;
+  images: string[];
+  isUrgent: boolean;
+  allowNegotiation: boolean;
+  status: "active" | "rented" | "unavailable";
+  createdAt: string;
+}
 
 /* ─── Metadata maps ─────────────────────────────────────────────────────── */
 
@@ -43,29 +75,50 @@ export default function ListedProductsPage() {
   const [rentItems, setRentItems] = useState<RentItem[]>([]);
   const [saleFilter, setSaleFilter] = useState<SaleFilter>("all");
   const [rentFilter, setRentFilter] = useState<RentFilter>("all");
-  const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setProducts(getProducts());
-    setRentItems(getRentItems());
-    setMounted(true);
+    refreshAll();
   }, []);
 
-  const refreshAll = () => {
-    setProducts(getProducts());
-    setRentItems(getRentItems());
+  const refreshAll = async () => {
+    setLoading(true);
+    try {
+      const [pRes, rRes] = await Promise.all([
+        fetch("/api/seller/products"),
+        fetch("/api/seller/rent-items"),
+      ]);
+      if (pRes.ok) setProducts(await pRes.json());
+      if (rRes.ok) setRentItems(await rRes.json());
+    } catch (err) {
+      console.error("Failed to refresh:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDeleteProduct = (id: string, title: string) => {
+  const handleDeleteProduct = async (id: string, title: string) => {
     if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
-    deleteProduct(id);
-    refreshAll();
+    try {
+      const res = await fetch(`/api/seller/products/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete product");
+      refreshAll();
+    } catch (err: any) {
+      alert(err.message);
+    }
   };
 
-  const handleDeleteRent = (id: string, title: string) => {
+  const handleDeleteRent = async (id: string, title: string) => {
     if (!confirm(`Remove "${title}" from rent listings? This cannot be undone.`)) return;
-    deleteRentItem(id);
-    refreshAll();
+    try {
+      const res = await fetch(`/api/seller/rent-items/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete item");
+      refreshAll();
+    } catch (err: any) {
+      alert(err.message);
+    }
   };
 
   const filteredProducts =
@@ -78,7 +131,13 @@ export default function ListedProductsPage() {
   const rentCount = (tab: RentFilter) =>
     tab === "all" ? rentItems.length : rentItems.filter((r) => r.status === tab).length;
 
-  if (!mounted) return null;
+  if (loading) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", padding: "4rem" }}>
+        <p style={{ color: "#64748b" }}>Loading listings...</p>
+      </div>
+    );
+  }
 
   return (
     <div style={s.page}>
@@ -182,7 +241,7 @@ export default function ListedProductsPage() {
                 };
                 const status = PRODUCT_STATUS_META[product.status];
                 return (
-                  <div key={product.id} style={s.card}>
+                  <div key={product._id} style={s.card}>
                     <div style={s.imgWrap}>
                       {product.images.length > 0 ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -236,8 +295,8 @@ export default function ListedProductsPage() {
                     </div>
 
                     <div style={s.cardActions}>
-                      <Link href={`/seller/products/${product.id}/edit`} style={s.editBtn}>✏️ Edit</Link>
-                      <button style={s.deleteBtn} onClick={() => handleDeleteProduct(product.id, product.title)}>
+                      <Link href={`/seller/products/${product._id}/edit`} style={s.editBtn}>✏️ Edit</Link>
+                      <button style={s.deleteBtn} onClick={() => handleDeleteProduct(product._id, product.title)}>
                         🗑 Delete
                       </button>
                     </div>
@@ -298,7 +357,7 @@ export default function ListedProductsPage() {
                 };
                 const status = RENT_STATUS_META[item.status];
                 return (
-                  <div key={item.id} style={s.card}>
+                  <div key={item._id} style={s.card}>
                     <div style={s.imgWrap}>
                       {item.images.length > 0 ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -335,18 +394,18 @@ export default function ListedProductsPage() {
 
                       {/* Rent pricing */}
                       <div style={s.priceRow}>
-                        <span style={s.price}>₹{item.pricing.pricePerDay}/day</span>
-                        {item.pricing.pricePerWeek && (
-                          <span style={s.priceAlt}>₹{item.pricing.pricePerWeek}/wk</span>
+                        <span style={s.price}>₹{item.pricing.day}/day</span>
+                        {item.pricing.week && (
+                          <span style={s.priceAlt}>₹{item.pricing.week}/wk</span>
                         )}
-                        {item.pricing.pricePerMonth && (
-                          <span style={s.priceAlt}>₹{item.pricing.pricePerMonth}/mo</span>
+                        {item.pricing.month && (
+                          <span style={s.priceAlt}>₹{item.pricing.month}/mo</span>
                         )}
                       </div>
 
                       {/* Availability */}
                       <p style={s.availText}>
-                        📅 {item.availability.availableFrom} → {item.availability.availableTill}
+                        📅 {new Date(item.availability.from).toLocaleDateString()} → {new Date(item.availability.till).toLocaleDateString()}
                       </p>
 
                       {item.securityDeposit && (
@@ -363,7 +422,7 @@ export default function ListedProductsPage() {
                     </div>
 
                     <div style={s.cardActions}>
-                      <button style={s.deleteBtn} onClick={() => handleDeleteRent(item.id, item.title)}>
+                      <button style={s.deleteBtn} onClick={() => handleDeleteRent(item._id, item.title)}>
                         🗑 Remove
                       </button>
                     </div>

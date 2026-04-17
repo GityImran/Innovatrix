@@ -14,7 +14,6 @@ import React, {
   FormEvent,
 } from "react";
 import { useRouter } from "next/navigation";
-import { saveRentItem } from "@/lib/rentStore";
 
 type Condition = "new" | "good" | "used";
 type Category =
@@ -160,7 +159,10 @@ export default function RentItemPage() {
         pricePerWeek: pricePerWeek ? Number(pricePerWeek) : undefined,
         pricePerMonth: pricePerMonth ? Number(pricePerMonth) : undefined,
       },
-      availability: { availableFrom, availableTill },
+      availability: {
+        from: new Date(availableFrom),
+        till: new Date(availableTill),
+      },
       securityDeposit: securityDeposit ? Number(securityDeposit) : undefined,
       images: images.map((i) => i.dataUrl),
       isUrgent,
@@ -168,21 +170,24 @@ export default function RentItemPage() {
       status: "active" as const,
     };
 
-    console.log("Rent Item Submission:", payload);
+    try {
+      const res = await fetch("/api/seller/rent-items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-    // Persist to local store
-    saveRentItem(payload);
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to list item for rent");
+      }
 
-    // ── placeholder API call ──────────────────────────────────────────────
-    // await fetch("/api/rent/items", {
-    //   method: "POST",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify(payload),
-    // });
-
-    await new Promise((r) => setTimeout(r, 900)); // simulated delay
-    setSubmitting(false);
-    router.push("/seller/products");
+      router.push("/seller/products");
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // ── render ────────────────────────────────────────────────────────────────

@@ -14,7 +14,6 @@ import React, {
   FormEvent,
 } from "react";
 import { useRouter } from "next/navigation";
-import { saveProduct } from "@/lib/productStore";
 
 type Condition = "new" | "good" | "used" | "";
 type Category =
@@ -141,25 +140,70 @@ export default function AddProductPage() {
     if (!validate()) return;
     setSubmitting(true);
 
-    // Simulate API latency
-    await new Promise((r) => setTimeout(r, 1000));
+    try {
+      const res = await fetch("/api/seller/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category,
+          title: title.trim(),
+          description: description.trim(),
+          condition,
+          originalPrice: originalPrice ? Number(originalPrice) : undefined,
+          expectedPrice: Number(expectedPrice),
+          images: images.map((i) => i.dataUrl),
+          isUrgent,
+          isBundle,
+          bundleTitle: isBundle ? bundleTitle.trim() : undefined,
+          status: "active",
+        }),
+      });
 
-    saveProduct({
-      category,
-      title: title.trim(),
-      description: description.trim(),
-      condition: condition as "new" | "good" | "used",
-      originalPrice: originalPrice ? Number(originalPrice) : undefined,
-      expectedPrice: Number(expectedPrice),
-      images: images.map((i) => i.dataUrl),
-      isUrgent,
-      isBundle,
-      bundleTitle: isBundle ? bundleTitle.trim() : undefined,
-      status: "active",
-    });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to list product");
+      }
 
-    setSubmitting(false);
-    router.push("/seller/products");
+      router.push("/seller/products");
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const saveAsDraft = async () => {
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/seller/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category: category || "Others",
+          title: title.trim() || "Untitled Draft",
+          description,
+          condition: condition || "used",
+          originalPrice: originalPrice ? Number(originalPrice) : undefined,
+          expectedPrice: Number(expectedPrice) || 0,
+          images: images.map((i) => i.dataUrl),
+          isUrgent,
+          isBundle,
+          bundleTitle: isBundle ? bundleTitle : undefined,
+          status: "draft",
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to save draft");
+      }
+
+      router.push("/seller/products");
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   /* ── Helpers ── */
@@ -558,25 +602,7 @@ export default function AddProductPage() {
             type="button"
             style={s.btnDraft}
             disabled={submitting}
-            onClick={async () => {
-              setSubmitting(true);
-              await new Promise((r) => setTimeout(r, 500));
-              saveProduct({
-                category: category || "Others",
-                title: title.trim() || "Untitled Draft",
-                description,
-                condition: (condition as "new" | "good" | "used") || "used",
-                originalPrice: originalPrice ? Number(originalPrice) : undefined,
-                expectedPrice: Number(expectedPrice) || 0,
-                images: images.map((i) => i.dataUrl),
-                isUrgent,
-                isBundle,
-                bundleTitle: isBundle ? bundleTitle : undefined,
-                status: "draft",
-              });
-              setSubmitting(false);
-              router.push("/seller/products");
-            }}
+            onClick={saveAsDraft}
           >
             Save as Draft
           </button>
