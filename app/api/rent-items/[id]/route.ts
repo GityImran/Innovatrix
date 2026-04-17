@@ -4,11 +4,12 @@ import RentItem from "@/models/RentItem";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await connectToDatabase();
-    const item = await RentItem.findById(params.id).populate(
+    const item = await RentItem.findById(id).populate(
       "sellerId",
       "name email"
     );

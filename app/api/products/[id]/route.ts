@@ -4,11 +4,12 @@ import Product from "@/models/Product";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await connectToDatabase();
-    const product = await Product.findById(params.id).populate(
+    const product = await Product.findById(id).populate(
       "sellerId",
       "name email"
     );
