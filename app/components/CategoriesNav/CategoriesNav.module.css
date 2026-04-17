@@ -1,0 +1,38 @@
+.subnav {
+  background-color: var(--subnav-bg);
+  height: 40px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.navList {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+/* Hide scrollbar for a cleaner look */
+.navList::-webkit-scrollbar {
+  display: none;
+}
+
+.navItem {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-color);
+  padding: 0.25rem;
+  border: 1px solid transparent;
+  border-radius: var(--border-radius-sm);
+  transition: border-color 0.2s;
+}
+
+.navItem:hover {
+  border-color: var(--text-muted);
+}
+
+.highlight {
+  font-weight: 700;
+}

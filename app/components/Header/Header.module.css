@@ -1,0 +1,134 @@
+.header {
+  background-color: var(--nav-bg);
+  height: var(--header-height);
+  border-bottom: 1px solid var(--card-border);
+  display: flex;
+  align-items: center;
+}
+
+.headerContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  width: 100%;
+}
+
+.logo a {
+  font-size: 1.75rem;
+  font-weight: 800;
+  display: flex;
+  align-items: baseline;
+  color: var(--text-color);
+}
+
+.logoAccent {
+  color: var(--primary-color);
+}
+
+.logoSub {
+  font-size: 1rem;
+  font-weight: 400;
+  margin-left: 2px;
+  color: var(--text-muted);
+}
+
+.searchBar {
+  flex: 1;
+  display: flex;
+  height: 44px;
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+  max-width: 800px;
+}
+
+.searchSelect {
+  background-color: #f3f4f6;
+  border: none;
+  border-right: 1px solid #d1d5db;
+  padding: 0 0.75rem;
+  color: #374151;
+  font-size: 0.875rem;
+  width: auto;
+  cursor: pointer;
+  outline: none;
+}
+
+.searchInput {
+  flex: 1;
+  padding: 0 1rem;
+  border: none;
+  font-size: 1rem;
+  outline: none;
+  background-color: var(--search-bg);
+  color: var(--search-text);
+}
+
+.searchButton {
+  background-color: var(--primary-color);
+  border: none;
+  padding: 0 1.25rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+.searchButton:hover {
+  background-color: var(--primary-hover);
+}
+
+.userActions {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.actionItem {
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: var(--border-radius-sm);
+  transition: border-color 0.2s;
+}
+
+.actionItem:hover {
+  border-color: var(--text-color);
+}
+
+.actionLabel {
+  font-size: 0.75rem;
+  line-height: 1;
+  color: var(--text-muted);
+}
+
+.actionBold {
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.cart {
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 0.25rem;
+  position: relative;
+}
+
+.cartIcon {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.cartCount {
+  position: absolute;
+  top: -2px;
+  left: 14px;
+  color: var(--primary-color);
+  font-weight: 800;
+  font-size: 1rem;
+}

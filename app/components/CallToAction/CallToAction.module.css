@@ -1,0 +1,59 @@
+.ctaSection {
+  padding: 6rem 0;
+}
+
+.ctaCard {
+  background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+  border-radius: 2rem;
+  padding: 4rem 2rem;
+  text-align: center;
+  color: white;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.ctaCard::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 60%);
+  z-index: 1;
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.title {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.desc {
+  font-size: 1.125rem;
+  opacity: 0.9;
+  margin-bottom: 2rem;
+}
+
+.btn {
+  display: inline-block;
+  background-color: white;
+  color: var(--text-color);
+  padding: 1rem 2.5rem;
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: 1.125rem;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}

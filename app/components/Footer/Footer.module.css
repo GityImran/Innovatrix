@@ -1,0 +1,75 @@
+.footer {
+  background-color: var(--card-bg);
+  border-top: 1px solid var(--card-border);
+  padding-top: 4rem;
+}
+
+.footerContent {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 3rem;
+  margin-bottom: 3rem;
+}
+
+.brand {
+  max-width: 300px;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.logoIcon {
+  color: var(--primary-color);
+  font-size: 1.8rem;
+}
+
+.logoAccent {
+  color: var(--primary-color);
+}
+
+.tagline {
+  opacity: 0.7;
+}
+
+.links {
+  display: flex;
+  gap: 4rem;
+  flex-wrap: wrap;
+}
+
+.linkGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.linkTitle {
+  font-size: 1.125rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-color);
+}
+
+.linkGroup a {
+  opacity: 0.7;
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.linkGroup a:hover {
+  opacity: 1;
+  color: var(--primary-color);
+}
+
+.copyright {
+  text-align: center;
+  padding: 1.5rem 0;
+  border-top: 1px solid var(--card-border);
+  opacity: 0.6;
+  font-size: 0.875rem;
+}
