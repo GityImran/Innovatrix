@@ -16,12 +16,6 @@ import Razorpay from "razorpay";
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID;
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
 
-if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
-  throw new Error(
-    "Missing RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET environment variables."
-  );
-}
-
 /**
  * Singleton instance — reused across hot-reloads in dev mode
  * via the global cache pattern (same as lib/mongodb.ts).
@@ -31,9 +25,17 @@ declare global {
   var _razorpayInstance: Razorpay | undefined;
 }
 
-export const razorpay: Razorpay =
-  global._razorpayInstance ??
-  (global._razorpayInstance = new Razorpay({
-    key_id: RAZORPAY_KEY_ID,
-    key_secret: RAZORPAY_KEY_SECRET,
-  }));
+export const getRazorpayInstance = (): Razorpay | null => {
+  if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
+    return null;
+  }
+
+  return (
+    global._razorpayInstance ??
+    (global._razorpayInstance = new Razorpay({
+      key_id: RAZORPAY_KEY_ID,
+      key_secret: RAZORPAY_KEY_SECRET,
+    }))
+  );
+};
+

@@ -81,21 +81,31 @@ export default function OrdersPage() {
 
   /* ── Generate Payment Link (idempotent — safe to call multiple times) ── */
   const handleGenerateLink = async (id: string) => {
+    console.log("🛒 Initiating Payment for order:", id);
     setProcessingId(id);
     try {
       const res = await fetch(`/api/orders/${id}/generate-payment-link`, { method: "POST" });
       const data = await res.json();
+      console.log("📥 Payment API Response:", data);
+
       if (res.ok && data.short_url) {
+        console.log("💳 QR Link generated:", data.short_url);
         setModal({ orderId: id, shortUrl: data.short_url, amount: data.amount });
         setPollingId(id);
         fetchOrders();
       } else if (res.ok && data.paymentLinkId) {
         // Already generated — short_url not re-returned, show copy prompt
+        console.log("ℹ️ Payment link already exists:", data.paymentLinkId);
         showToast("⚠️ Payment link already exists. Ask buyer to check their previous QR.");
       } else {
+        console.error("❌ Failed to generate link:", data.error);
         showToast("❌ " + (data.error || "Failed to generate link"));
       }
-    } finally { setProcessingId(null); }
+    } catch (err) {
+      console.error("❌ Network or Parsing error:", err);
+    } finally {
+      setProcessingId(null);
+    }
   };
 
   /* ── Complete Order ── */

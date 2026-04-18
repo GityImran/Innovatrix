@@ -235,12 +235,19 @@ function AddProductForm() {
         }),
       });
 
+      const productData = await res.json();
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to list product");
+        throw new Error(productData.error || "Failed to list product");
       }
 
-      router.push("/seller/products");
+      const redirect = searchParams.get("redirect");
+      const requestId = searchParams.get("requestId");
+
+      if (redirect === "fulfill" && requestId) {
+        router.push(`/requests?autoSelect=${productData._id || ""}&requestId=${requestId}`);
+      } else {
+        router.push("/seller/products");
+      }
     } catch (err: any) {
       alert(err.message);
     } finally {

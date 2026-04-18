@@ -3,7 +3,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 export interface ICartItem extends Document {
   userId: mongoose.Types.ObjectId;
   itemId: mongoose.Types.ObjectId;
-  itemModel: "Product" | "RentItem";
+  itemModel: "Product" | "RentItem" | "Auction";
   addedAt: Date;
 }
 
@@ -14,7 +14,7 @@ const CartItemSchema = new Schema<ICartItem>(
     itemModel: {
       type: String,
       required: true,
-      enum: ["Product", "RentItem"],
+      enum: ["Product", "RentItem", "Auction"],
     },
     addedAt: { type: Date, default: Date.now },
   },

@@ -4,7 +4,7 @@ export interface IOrder extends Document {
   buyerId: mongoose.Types.ObjectId;
   sellerId: mongoose.Types.ObjectId;
   itemId: mongoose.Types.ObjectId;
-  itemModel: "Product" | "RentItem";
+  itemModel: "Product" | "RentItem" | "Auction";
   orderType: "purchase" | "rent";
   totalAmount: number;
   /**
@@ -30,7 +30,7 @@ const OrderSchema = new Schema<IOrder>(
     itemModel: {
       type: String,
       required: true,
-      enum: ["Product", "RentItem"],
+      enum: ["Product", "RentItem", "Auction"],
     },
     orderType: {
       type: String,

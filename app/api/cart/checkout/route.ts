@@ -4,6 +4,7 @@ import CartItem from "@/models/Cart";
 import Order from "@/models/Order";
 import Product from "@/models/Product";
 import RentItem from "@/models/RentItem";
+import Auction from "@/models/Auction";
 import { auth } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
@@ -40,14 +41,20 @@ export async function POST(req: NextRequest) {
         productDetail = await Product.findById(item.itemId);
       } else if (item.itemModel === "RentItem") {
         productDetail = await RentItem.findById(item.itemId);
+      } else if (item.itemModel === "Auction") {
+        productDetail = await Auction.findById(item.itemId);
       }
 
       if (!productDetail) continue;
 
-      const price =
-        item.itemModel === "Product"
-          ? productDetail.expectedPrice
-          : productDetail.pricing?.day || 0;
+      let price = 0;
+      if (item.itemModel === "Product") {
+        price = productDetail.expectedPrice;
+      } else if (item.itemModel === "RentItem") {
+        price = productDetail.pricing?.day || 0;
+      } else if (item.itemModel === "Auction") {
+        price = productDetail.currentBid;
+      }
 
       // Ensure we extract proper ObjectIds
       const actualItemId = productDetail._id || item.itemId;
@@ -59,7 +66,7 @@ export async function POST(req: NextRequest) {
         sellerId: actualSellerId,
         itemId: actualItemId,
         itemModel: item.itemModel,
-        orderType: item.itemModel === "Product" ? "purchase" : "rent",
+        orderType: item.itemModel === "RentItem" ? "rent" : "purchase",
         totalAmount: price,
         status: "pending",
         paymentMethod,
@@ -71,6 +78,9 @@ export async function POST(req: NextRequest) {
         await Product.findByIdAndUpdate(actualItemId, { status: "sold" });
       } else if (item.itemModel === "RentItem") {
         await RentItem.findByIdAndUpdate(actualItemId, { status: "rented" });
+      } else if (item.itemModel === "Auction") {
+        // Auction is already "ended", but we can mark it as "purchased" if needed
+        // For now, it stays "ended".
       }
     }
 

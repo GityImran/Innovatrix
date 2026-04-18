@@ -80,6 +80,9 @@ export default function UserAuthDropdown({ session }: UserAuthDropdownProps) {
               <button onClick={handleSellItemClick} className={styles.dropdownItem} style={{ width: '100%', textAlign: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 'inherit', font: 'inherit' }}>
                 Sell Item
               </button>
+              <Link href="/seller/auctions" className={styles.dropdownItem} style={{ textAlign: 'center', display: 'block' }}>
+                My Auctions
+              </Link>
               <button 
                 onClick={() => signOut({ callbackUrl: "/" })} 
                 className={styles.dropdownItem}

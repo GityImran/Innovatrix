@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 
 export default function RequestDetails({ 
@@ -14,12 +14,25 @@ export default function RequestDetails({
   session: any 
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const autoSelect = searchParams.get("autoSelect");
+  const fulfillParam = searchParams.get("fulfill");
+
   const [responses, setResponses] = useState<any[]>(initialResponses);
   const [sellerProducts, setSellerProducts] = useState<any[]>([]);
   const [showFulfillModal, setShowFulfillModal] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState("");
   const [submittingResponse, setSubmittingResponse] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (autoSelect || fulfillParam) {
+      handleFulfillClick();
+      if (autoSelect) {
+        setSelectedProductId(autoSelect);
+      }
+    }
+  }, [autoSelect, fulfillParam]);
 
   const fetchResponses = async () => {
     try {
@@ -38,25 +51,24 @@ export default function RequestDetails({
     }
 
     try {
+      // 1. Check seller status first
+      const sellerRes = await fetch("/api/seller/register");
+      const sellerData = await sellerRes.json();
+
+      if (sellerData.status !== "approved") {
+        router.push("/seller/register");
+        return;
+      }
+
+      // 2. Fetch seller products
       const res = await fetch("/api/seller/products");
       const data = await res.json();
       
       const activeProducts = data.filter((p: any) => p.status === "active");
-      
-      if (activeProducts.length === 0) {
-        const query = new URLSearchParams({
-          title: request.title,
-          category: request.category,
-          condition: request.condition.toLowerCase(),
-          fromRequest: request._id as string
-        }).toString();
-        router.push(`/seller/add-product?${query}`);
-      } else {
-        setSellerProducts(activeProducts);
-        setShowFulfillModal(true);
-      }
+      setSellerProducts(activeProducts);
+      setShowFulfillModal(true);
     } catch (err) {
-      console.error("Error fetching seller products:", err);
+      console.error("Error in fulfillment flow:", err);
     }
   };
 
@@ -100,12 +112,32 @@ export default function RequestDetails({
       const data = await res.json();
 
       if (res.ok) {
-        router.push(`/product/${data.productId}`);
+        // Redirect to cart page after adding the item
+        router.push("/cart");
       } else {
         alert(data.error || "Failed to accept offer");
       }
     } catch (err) {
       console.error("Error accepting offer:", err);
+    }
+  };
+
+  const handleRejectOffer = async (responseId: string) => {
+    if (!confirm("Are you sure you want to reject this offer?")) return;
+
+    try {
+      const res = await fetch(`/api/requests/respond/${responseId}/reject`, {
+        method: "POST",
+      });
+      
+      if (res.ok) {
+        fetchResponses();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to reject offer");
+      }
+    } catch (err) {
+      console.error("Error rejecting offer:", err);
     }
   };
 
@@ -231,19 +263,21 @@ export default function RequestDetails({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {responses.map((resp) => {
               const accepted = resp.status === 'accepted';
+              const rejected = resp.status === 'rejected';
               return (
                 <div 
                   key={resp._id} 
                   style={{
-                    background: accepted ? 'rgba(16,185,129,0.04)' : 'linear-gradient(145deg, rgba(20,20,20,0.9), rgba(15,15,15,0.9))',
-                    border: `1px solid ${accepted ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.06)'}`,
+                    background: accepted ? 'rgba(16,185,129,0.04)' : rejected ? 'rgba(239,68,68,0.02)' : 'linear-gradient(145deg, rgba(20,20,20,0.9), rgba(15,15,15,0.9))',
+                    border: `1px solid ${accepted ? 'rgba(16,185,129,0.2)' : rejected ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.06)'}`,
                     borderRadius: '20px',
                     padding: '20px',
                     display: 'flex',
                     flexWrap: 'wrap',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    gap: '20px'
+                    gap: '20px',
+                    opacity: rejected ? 0.6 : 1
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: '1 1 min-content' }}>
@@ -265,44 +299,66 @@ export default function RequestDetails({
                   </div>
 
                   <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                    <button 
-                      onClick={() => router.push(`/product/${resp.productId?._id}`)}
-                      style={{
-                        background: 'rgba(255,255,255,0.05)',
-                        color: '#e2e8f0',
-                        fontSize: '13px',
-                        fontWeight: 700,
-                        padding: '10px 20px',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: '10px',
-                        cursor: 'pointer',
-                        transition: 'background 0.2s'
-                      }}
-                      onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                      onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                    >
-                      View Product
-                    </button>
-                    {isOwner && !isFulfilled && (
+                    {!rejected && (
                       <button 
-                        onClick={() => handleAcceptOffer(resp._id)}
+                        onClick={() => router.push(`/product/${resp.productId?._id}`)}
                         style={{
-                          background: 'linear-gradient(135deg, #10b981, #059669)',
-                          color: '#fff',
+                          background: 'rgba(255,255,255,0.05)',
+                          color: '#e2e8f0',
                           fontSize: '13px',
                           fontWeight: 700,
                           padding: '10px 20px',
-                          border: 'none',
+                          border: '1px solid rgba(255,255,255,0.1)',
                           borderRadius: '10px',
                           cursor: 'pointer',
-                          boxShadow: '0 4px 12px rgba(16,185,129,0.2)',
-                          transition: 'transform 0.2s, box-shadow 0.2s'
+                          transition: 'background 0.2s'
                         }}
-                        onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(16,185,129,0.3)'; }}
-                        onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(16,185,129,0.2)'; }}
+                        onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                        onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
                       >
-                        Accept Offer
+                        View Product
                       </button>
+                    )}
+                    {isOwner && !isFulfilled && resp.status === 'pending' && (
+                      <>
+                        <button 
+                          onClick={() => handleAcceptOffer(resp._id)}
+                          style={{
+                            background: 'linear-gradient(135deg, #10b981, #059669)',
+                            color: '#fff',
+                            fontSize: '13px',
+                            fontWeight: 700,
+                            padding: '10px 20px',
+                            border: 'none',
+                            borderRadius: '10px',
+                            cursor: 'pointer',
+                            boxShadow: '0 4px 12px rgba(16,185,129,0.2)',
+                            transition: 'transform 0.2s, box-shadow 0.2s'
+                          }}
+                          onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(16,185,129,0.3)'; }}
+                          onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(16,185,129,0.2)'; }}
+                        >
+                          Accept Offer
+                        </button>
+                        <button 
+                          onClick={() => handleRejectOffer(resp._id)}
+                          style={{
+                            background: 'rgba(239,68,68,0.1)',
+                            color: '#ef4444',
+                            fontSize: '13px',
+                            fontWeight: 700,
+                            padding: '10px 20px',
+                            border: '1px solid rgba(239,68,68,0.2)',
+                            borderRadius: '10px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.2)'; }}
+                          onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; }}
+                        >
+                          Reject
+                        </button>
+                      </>
                     )}
                     {accepted && (
                       <span style={{
@@ -313,6 +369,17 @@ export default function RequestDetails({
                         border: '1px solid rgba(16,185,129,0.3)',
                       }}>
                         Accepted
+                      </span>
+                    )}
+                    {rejected && (
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', alignSelf: 'center',
+                        padding: '6px 16px', borderRadius: '999px', fontSize: '11px', fontWeight: 800,
+                        textTransform: 'uppercase', letterSpacing: '0.08em',
+                        background: 'rgba(239,68,68,0.1)', color: '#f87171',
+                        border: '1px solid rgba(239,68,68,0.2)',
+                      }}>
+                        Rejected
                       </span>
                     )}
                   </div>
@@ -348,41 +415,60 @@ export default function RequestDetails({
             <div style={{ padding: '24px 32px', maxHeight: '60vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {error && <p style={{ margin: '0 0 16px 0', padding: '12px', background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '12px', fontSize: '13px' }}>{error}</p>}
               
-              {sellerProducts.map((product) => {
-                const isSelected = selectedProductId === product._id;
-                return (
-                  <div 
-                    key={product._id}
-                    onClick={() => setSelectedProductId(product._id)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', borderRadius: '16px', cursor: 'pointer',
-                      background: isSelected ? 'rgba(245,158,11,0.05)' : 'rgba(255,255,255,0.02)',
-                      border: `1px solid ${isSelected ? 'rgba(245,158,11,0.3)' : 'rgba(255,255,255,0.05)'}`,
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    <div style={{ width: '50px', height: '50px', background: '#0a0a0a', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', flexShrink: 0 }}>
-                      {product.image?.url ? (
-                        <img src={product.image.url} alt={product.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', opacity: 0.3 }}>📦</div>
-                      )}
+              {sellerProducts.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '24px', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                  <p style={{ margin: '0 0 16px 0', color: '#64748b', fontSize: '14px' }}>You don't have any active listings yet.</p>
+                </div>
+              ) : (
+                sellerProducts.map((product) => {
+                  const isSelected = selectedProductId === product._id;
+                  return (
+                    <div 
+                      key={product._id}
+                      onClick={() => setSelectedProductId(product._id)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', borderRadius: '16px', cursor: 'pointer',
+                        background: isSelected ? 'rgba(245,158,11,0.05)' : 'rgba(255,255,255,0.02)',
+                        border: `1px solid ${isSelected ? 'rgba(245,158,11,0.3)' : 'rgba(255,255,255,0.05)'}`,
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <div style={{ width: '50px', height: '50px', background: '#0a0a0a', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', flexShrink: 0 }}>
+                        {product.image?.url ? (
+                          <img src={product.image.url} alt={product.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', opacity: 0.3 }}>📦</div>
+                        )}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 700, color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.title}</p>
+                        <p style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#fbbf24' }}>₹{product.expectedPrice?.toLocaleString('en-IN')}</p>
+                      </div>
+                      <div style={{
+                        width: '24px', height: '24px', borderRadius: '50%',
+                        border: `2px solid ${isSelected ? '#f59e0b' : 'rgba(255,255,255,0.1)'}`,
+                        background: isSelected ? '#f59e0b' : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s'
+                      }}>
+                        {isSelected && <span style={{ color: '#000', fontSize: '12px', fontWeight: 900 }}>✓</span>}
+                      </div>
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 700, color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.title}</p>
-                      <p style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#fbbf24' }}>₹{product.expectedPrice?.toLocaleString('en-IN')}</p>
-                    </div>
-                    <div style={{
-                      width: '24px', height: '24px', borderRadius: '50%',
-                      border: `2px solid ${isSelected ? '#f59e0b' : 'rgba(255,255,255,0.1)'}`,
-                      background: isSelected ? '#f59e0b' : 'transparent',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s'
-                    }}>
-                      {isSelected && <span style={{ color: '#000', fontSize: '12px', fontWeight: 900 }}>✓</span>}
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
+
+              <div 
+                onClick={() => router.push(`/seller/add-product?redirect=fulfill&requestId=${request._id}`)}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '16px', borderRadius: '16px', cursor: 'pointer',
+                  background: 'rgba(245,158,11,0.1)', border: '1px dashed rgba(245,158,11,0.3)', color: '#fbbf24', transition: 'all 0.2s', marginTop: '8px'
+                }}
+                onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.15)'; e.currentTarget.style.borderColor = 'rgba(245,158,11,0.5)'; }}
+                onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.1)'; e.currentTarget.style.borderColor = 'rgba(245,158,11,0.3)'; }}
+              >
+                <span style={{ fontSize: '18px', fontWeight: 800 }}>+</span>
+                <span style={{ fontSize: '14px', fontWeight: 800 }}>Add New Product</span>
+              </div>
             </div>
 
             <div style={{ padding: '20px 32px', background: 'rgba(0,0,0,0.2)', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: '16px' }}>

@@ -4,6 +4,8 @@ import { connectToDatabase } from "@/lib/mongodb";
 import Request from "@/models/Request";
 import RequestResponse from "@/models/RequestResponse";
 import Product from "@/models/Product";
+import SellerRequest from "@/models/SellerRequest";
+import Notification from "@/models/Notification";
 
 export async function POST(req: Request) {
   try {
@@ -11,6 +13,8 @@ export async function POST(req: Request) {
     if (!session || !session.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const currentUserId = session.user.id;
 
     const body = await req.json();
     const { requestId, productId, offeredPrice } = body;
@@ -24,11 +28,29 @@ export async function POST(req: Request) {
 
     await connectToDatabase();
 
-    // Check if request exists and is open
+    // 1. Check seller verification status
+    const sellerStatus = await SellerRequest.findOne({ userId: currentUserId });
+    if (!sellerStatus || sellerStatus.status !== "approved") {
+      return NextResponse.json(
+        { error: "Seller not verified. Please register as a seller first." },
+        { status: 403 }
+      );
+    }
+
+    // 2. Check if request exists and is open
     const request = await Request.findById(requestId);
     if (!request) {
       return NextResponse.json({ error: "Request not found" }, { status: 404 });
     }
+
+    // 3. Prevent self-fulfillment
+    if (request.userId.toString() === currentUserId) {
+      return NextResponse.json(
+        { error: "You cannot fulfill your own request" },
+        { status: 403 }
+      );
+    }
+
     if (request.status !== "open") {
       return NextResponse.json(
         { error: "This request is no longer open" },
@@ -66,6 +88,14 @@ export async function POST(req: Request) {
       productId,
       sellerId: session.user.id,
       offeredPrice: offeredPrice || product.expectedPrice,
+    });
+
+    // Create notification for request owner
+    await Notification.create({
+      userId: request.userId.toString(),
+      message: `📦 Someone sent an offer for your request: "${request.title}"`,
+      type: "request_offer",
+      requestId: request._id.toString(),
     });
 
     return NextResponse.json(newResponse, { status: 201 });

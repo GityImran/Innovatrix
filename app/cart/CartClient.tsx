@@ -11,9 +11,12 @@ type CartItem = {
   itemId: {
     _id: string;
     title: string;
+    productTitle?: string; // For Auction model
     expectedPrice?: number;
+    currentBid?: number; // For Auction model
     pricing?: { day?: number };
     image?: { url: string };
+    images?: string[]; // For Auction model
     category?: string;
     sellerDomain?: string;
   } | null;
@@ -88,10 +91,15 @@ export default function CartClient() {
   };
 
   const subtotal = items.reduce((acc, item) => {
-    const price = item.itemModel === "Product"
-      ? item.itemId?.expectedPrice
-      : item.itemId?.pricing?.day || 0;
-    return acc + (price || 0);
+    let price = 0;
+    if (item.itemModel === "Product") {
+      price = item.itemId?.expectedPrice || 0;
+    } else if (item.itemModel === "RentItem") {
+      price = item.itemId?.pricing?.day || 0;
+    } else if (item.itemModel === "Auction") {
+      price = item.itemId?.currentBid || 0;
+    }
+    return acc + price;
   }, 0);
 
   /* ── Shared: Step Progress Bar ──────────────── */
@@ -367,21 +375,40 @@ export default function CartClient() {
             {items.map((item, idx) => {
               const product = item.itemId;
               const isSell = item.itemModel === "Product";
-              const price = isSell ? product?.expectedPrice : product?.pricing?.day || 0;
+              const isRent = item.itemModel === "RentItem";
+              const isAuction = item.itemModel === "Auction";
+
+              let price = 0;
+              let title = product?.title || "Unknown Item";
+              let imageUrl = product?.image?.url;
+              let category = product?.category;
+
+              if (isSell) {
+                price = product?.expectedPrice || 0;
+              } else if (isRent) {
+                price = product?.pricing?.day || 0;
+              } else if (isAuction) {
+                price = product?.currentBid || 0;
+                title = product?.productTitle || "Won Auction";
+                imageUrl = product?.images && product.images.length > 0 ? product.images[0] : undefined;
+              }
+
               return (
                 <div key={item._id} className="fade-item" style={{ animationDelay: `${idx * 50}ms`, display: "flex", gap: "14px", alignItems: "center", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "16px", padding: "14px" }}>
                   <div style={{ width: "62px", height: "62px", borderRadius: "10px", overflow: "hidden", flexShrink: 0, background: "#111" }}>
-                    {product?.image?.url
-                      ? <img src={product.image.url} alt={product.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem", opacity: 0.4 }}>{isSell ? "📦" : "🔁"}</div>
+                    {imageUrl
+                      ? <img src={imageUrl} alt={title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem", opacity: 0.4 }}>
+                          {isSell ? "📦" : isRent ? "🔁" : "🔨"}
+                        </div>
                     }
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: isSell ? "#f59e0b" : "#a855f7" }}>
-                      {isSell ? "For Sale" : "For Rent"} · {product?.category}
+                    <span style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: isSell ? "#f59e0b" : isRent ? "#a855f7" : "#10b981" }}>
+                      {isSell ? "For Sale" : isRent ? "For Rent" : "Auction Won"} {category ? `· ${category}` : ""}
                     </span>
                     <p style={{ margin: "3px 0 0", fontWeight: 700, fontSize: "14px", color: "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {product?.title || "Unknown Item"}
+                      {title}
                     </p>
                     {product?.sellerDomain && <p style={{ margin: "2px 0 0", fontSize: "11px", color: "#334155" }}>{product.sellerDomain}</p>}
                   </div>
@@ -389,7 +416,7 @@ export default function CartClient() {
                     <p style={{ margin: 0, fontSize: "1.1rem", fontWeight: 900, color: "#f59e0b", letterSpacing: "-0.02em" }}>
                       ₹{price?.toLocaleString("en-IN")}
                     </p>
-                    {!isSell && <p style={{ margin: "2px 0 0", fontSize: "11px", color: "#334155" }}>/day</p>}
+                    {isRent && <p style={{ margin: "2px 0 0", fontSize: "11px", color: "#334155" }}>/day</p>}
                   </div>
                 </div>
               );
@@ -479,29 +506,50 @@ export default function CartClient() {
               {items.map((item, idx) => {
                 const product = item.itemId;
                 const isSell = item.itemModel === "Product";
-                const price = isSell ? product?.expectedPrice : product?.pricing?.day || 0;
+                const isRent = item.itemModel === "RentItem";
+                const isAuction = item.itemModel === "Auction";
+
+                let price = 0;
+                let title = product?.title || "Unknown Item";
+                let imageUrl = product?.image?.url;
+                let category = product?.category;
+                let detailUrl = `/product/${product?._id}`;
+
+                if (isSell) {
+                  price = product?.expectedPrice || 0;
+                } else if (isRent) {
+                  price = product?.pricing?.day || 0;
+                } else if (isAuction) {
+                  price = product?.currentBid || 0;
+                  title = product?.productTitle || "Won Auction";
+                  imageUrl = product?.images && product.images.length > 0 ? product.images[0] : undefined;
+                  detailUrl = `/auction/${product?._id}`;
+                }
+
                 return (
                   <div key={item._id} className="fade-item" style={{ animationDelay: `${idx * 60}ms`, display: "flex", gap: "16px", alignItems: "center", background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "18px", padding: "16px" }}>
                     <div style={{ width: "88px", height: "88px", borderRadius: "12px", overflow: "hidden", flexShrink: 0, background: "#111", border: "1px solid rgba(255,255,255,0.05)" }}>
-                      {product?.image?.url
-                        ? <img src={product.image.url} alt={product.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                        : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem", opacity: 0.4 }}>{isSell ? "📦" : "🔁"}</div>
+                      {imageUrl
+                        ? <img src={imageUrl} alt={title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem", opacity: 0.4 }}>
+                            {isSell ? "📦" : isRent ? "🔁" : "🔨"}
+                          </div>
                       }
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px" }}>
                         <div style={{ minWidth: 0 }}>
-                          <span style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", color: isSell ? "#f59e0b" : "#a855f7", display: "block", marginBottom: "4px" }}>
-                            {isSell ? "🏷️ For Sale" : "🔁 For Rent"} · {product?.category}
+                          <span style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", color: isSell ? "#f59e0b" : isRent ? "#a855f7" : "#10b981", display: "block", marginBottom: "4px" }}>
+                            {isSell ? "🏷️ For Sale" : isRent ? "🔁 For Rent" : "🔨 Auction Won"} {category ? `· ${category}` : ""}
                           </span>
-                          <Link href={`/product/${product?._id}`} style={{ textDecoration: "none" }}>
+                          <Link href={detailUrl} style={{ textDecoration: "none" }}>
                             <h3 className="item-link" style={{ margin: 0, fontWeight: 700, fontSize: "1rem", color: "#e2e8f0", transition: "color 0.2s", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                              {product?.title || "Unknown Item"}
+                              {title}
                             </h3>
                           </Link>
                           <div style={{ display: "flex", alignItems: "baseline", gap: "4px", marginTop: "10px" }}>
                             <span style={{ fontSize: "1.25rem", fontWeight: 900, color: "#f59e0b", letterSpacing: "-0.02em" }}>₹{price?.toLocaleString("en-IN")}</span>
-                            {!isSell && <span style={{ fontSize: "12px", color: "#475569" }}>/day</span>}
+                            {isRent && <span style={{ fontSize: "12px", color: "#475569" }}>/day</span>}
                           </div>
                         </div>
                         <button className="remove-btn" onClick={() => removeItem(item._id)} style={{ flexShrink: 0, color: "#334155", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "10px", padding: "8px", display: "flex", alignItems: "center", cursor: "pointer", transition: "color 0.2s, background 0.2s" }} title="Remove">

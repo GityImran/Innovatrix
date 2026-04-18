@@ -26,15 +26,18 @@ export default async function ChatListPage() {
     .sort({ updatedAt: -1 })
     .lean() as any[];
 
-  // Get last message for each conversation
-  const convosWithLastMsg = await Promise.all(
+  // Get last message for each conversation and filter invalid data
+  const convosWithLastMsg = (await Promise.all(
     conversations.map(async (convo: any) => {
+      // Filter invalid data: MUST have buyer and seller
+      if (!convo.buyerId || !convo.sellerId) return null;
+
       const lastMsg = await Message.findOne({ conversationId: convo._id })
         .sort({ createdAt: -1 })
         .lean() as any;
       return { ...convo, lastMessage: lastMsg };
     })
-  );
+  )).filter(Boolean) as any[];
 
   return (
     <div className={styles.chatListContainer}>
@@ -52,10 +55,14 @@ export default async function ChatListPage() {
           </div>
         ) : (
           convosWithLastMsg.map((convo: any) => {
+            const buyerId = convo.buyerId?._id?.toString();
+            const sellerId = convo.sellerId?._id?.toString();
+
+            if (!buyerId || !sellerId) return null;
+
             const otherUser =
-              convo.buyerId._id.toString() === userId
-                ? convo.sellerId
-                : convo.buyerId;
+              buyerId === userId ? convo.sellerId : convo.buyerId;
+
             const initial = otherUser?.name?.charAt(0).toUpperCase() || '?';
             const itemTitle = convo.itemId?.title || 'Unknown Item';
             const lastMsgText = convo.lastMessage?.message || 'No messages yet';
@@ -65,6 +72,7 @@ export default async function ChatListPage() {
                   day: 'numeric',
                 })
               : '';
+
 
             return (
               <Link

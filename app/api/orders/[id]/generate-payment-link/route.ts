@@ -21,20 +21,58 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Order from "@/models/Order";
-import { razorpay } from "@/lib/razorpay";
+import { getRazorpayInstance } from "@/lib/razorpay";
 import { auth } from "@/lib/auth";
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  console.log("🚀 Razorpay API HIT");
+
   try {
     const { id } = await params;
     const session = await auth();
 
+    console.log("🔑 ENV CHECK:", {
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET ? "EXISTS" : "MISSING",
+    });
+
+    // Step 3 — REQUEST DATA
+    let body = {};
+    try {
+      body = await req.json();
+      console.log("📥 Incoming Request Body:", body);
+    } catch (e) {
+      console.log("📥 No Request Body provided");
+    }
+
+    // Step 4 — SAFE ENV VALIDATION
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      console.warn("⚠️ Razorpay ENV missing");
+
+      return NextResponse.json(
+        { error: "Payment service unavailable" },
+        { status: 503 }
+      );
+    }
+
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // Step 5 — INITIALIZE RAZORPAY
+    console.log("🔧 Initializing Razorpay...");
+    const razorpay = getRazorpayInstance();
+    if (!razorpay) {
+      console.warn("⚠️ Razorpay initialization failed (check keys)");
+      return NextResponse.json(
+        { error: "Payment service unavailable" },
+        { status: 503 }
+      );
+    }
+    console.log("✅ Razorpay initialized");
 
     await connectToDatabase();
 
@@ -63,33 +101,30 @@ export async function POST(
 
     // Idempotency: if a link was already generated, return it
     if (order.paymentLinkId) {
+      console.log("ℹ️ Payment link already exists:", order.paymentLinkId);
       return NextResponse.json({
         success: true,
         message: "Payment link already exists",
         paymentLinkId: order.paymentLinkId,
-        // Note: We cannot retrieve short_url again from stored ID without an API call.
-        // The seller should save the original short_url from the first call.
       });
     }
 
     // Razorpay expects amount in paise (1 INR = 100 paise)
     const amountInPaise = Math.round(order.totalAmount * 100);
 
-    /**
-     * Create Razorpay Payment Link
-     * Docs: https://razorpay.com/docs/payments/payment-links/apis/create/
-     *
-     * TEST: Use UPI ID "success@razorpay" to simulate a successful payment.
-     * The webhook will fire a "payment_link.paid" event automatically in test mode.
-     */
+    // Step 6 — CREATE ORDER (using Payment Link logic as per existing business logic)
+    console.log("📦 Creating Razorpay Payment Link...", {
+      amount: amountInPaise,
+      currency: "INR",
+      order_id: order._id.toString(),
+    });
+
     const paymentLink = await razorpay.paymentLink.create({
       amount: amountInPaise,
       currency: "INR",
       accept_partial: false,
       description: `Payment for Order #${order._id} — Campus Marketplace`,
       customer: {
-        // Seller provides buyer's contact at delivery time
-        // These can be left blank for anonymous UPI QR payments
         name: "Campus Buyer",
         email: "buyer@campus.com",
       },
@@ -102,26 +137,37 @@ export async function POST(
         order_id: order._id.toString(),
         seller_id: order.sellerId.toString(),
       },
-      // Webhook will fire "payment_link.paid" upon payment
     } as any);
+
+    console.log("✅ Payment Link Created:", paymentLink.id);
 
     // Store the Razorpay Payment Link ID for webhook lookup
     order.paymentLinkId = paymentLink.id;
     await order.save();
 
+    // Step 7 — RESPONSE
+    console.log("📤 Sending Response to Frontend:", {
+      paymentLinkId: paymentLink.id,
+      short_url: (paymentLink as any).short_url,
+      orderId: order._id,
+    });
+
     return NextResponse.json({
       success: true,
       paymentLinkId: paymentLink.id,
-      /**
-       * short_url: The URL/QR code to show the buyer.
-       * In test mode: opens Razorpay checkout in sandbox.
-       * Seller can display this as a QR code using any QR library.
-       */
       short_url: (paymentLink as any).short_url,
       amount: order.totalAmount,
       orderId: order._id,
     });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    // Step 8 — FULL ERROR TRACE
+    console.error("❌ Razorpay FULL ERROR:", error);
+
+    if (error instanceof Error) {
+      console.error("❌ Error Message:", error.message);
+      console.error("❌ Stack:", error.stack);
+    }
+
+    return NextResponse.json({ error: error.message || "Payment failed" }, { status: 500 });
   }
 }

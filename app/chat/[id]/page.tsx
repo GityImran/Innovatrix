@@ -30,8 +30,16 @@ export default async function ChatPage({ params }: ChatPageProps) {
   }
 
   const userId = session.user.id;
-  const isBuyer = conversation.buyerId._id.toString() === userId;
-  const isSeller = conversation.sellerId._id.toString() === userId;
+  const buyerId = conversation.buyerId?._id?.toString();
+  const sellerId = conversation.sellerId?._id?.toString();
+
+  if (!buyerId || !sellerId) {
+    notFound();
+  }
+
+  const isBuyer = buyerId === userId;
+  const isSeller = sellerId === userId;
+
 
   if (!isBuyer && !isSeller) {
     notFound();
