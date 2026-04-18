@@ -29,6 +29,11 @@ export default function SellerLayout({
   const pathname = usePathname();
   const pageTitle = PAGE_TITLES[pathname] ?? "Seller Dashboard";
 
+  // Don't show sidebar/topbar on the registration/status page
+  if (pathname === "/seller/register") {
+    return <>{children}</>;
+  }
+
   return (
     <div style={s.shell}>
       <Sidebar collapsed={collapsed} onCollapse={setCollapsed} />

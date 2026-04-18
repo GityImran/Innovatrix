@@ -6,7 +6,9 @@ export async function GET() {
   try {
     await connectToDatabase();
 
-    const requests = await SellerRequest.find().sort({ appliedAt: -1 });
+    const requests = await SellerRequest.find()
+      .populate("userId", "name email")
+      .sort({ appliedAt: -1 });
 
     return NextResponse.json(requests);
   } catch (error) {

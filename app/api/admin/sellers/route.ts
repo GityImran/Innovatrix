@@ -1,24 +1,29 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
-import User from "@/models/User";
+import SellerRequest from "@/models/SellerRequest";
 import Product from "@/models/Product";
+import User from "@/models/User";
 
 export async function GET() {
   try {
     await connectToDatabase();
 
-    // Find all users who are verified (sellers)
-    const sellers = await User.find({ isVerified: true });
+    // Fetch all requests that are either approved or disabled
+    const requests = await SellerRequest.find({
+      status: { $in: ["approved", "disabled"] },
+    }).populate("userId");
 
     const sellerData = await Promise.all(
-      sellers.map(async (seller) => {
-        const listingsCount = await Product.countDocuments({ sellerId: seller._id });
+      requests.map(async (req) => {
+        const listingsCount = await Product.countDocuments({ sellerId: req.userId });
+        const user = req.userId as any;
+        
         return {
-          id: seller._id,
-          name: seller.name,
-          status: "active", // Defaulting to active if verified
+          id: user?._id,
+          name: user?.name || req.fullName,
+          status: req.status === "approved" ? "active" : "disabled",
           listings: listingsCount,
-          lastActive: seller.updatedAt,
+          lastActive: user?.updatedAt || req.updatedAt,
         };
       })
     );

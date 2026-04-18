@@ -61,7 +61,8 @@ export const authConfig: NextAuthConfig = {
         token.id = user.id;
         token.email = user.email;
         token.name = user.name;
-        token.college = user.college;
+        token.college = (user as any).college;
+        token.isVerified = (user as any).isVerified;
       }
       return token;
     },
@@ -71,6 +72,7 @@ export const authConfig: NextAuthConfig = {
         session.user.id = token.id as string;
         session.user.email = token.email as string;
         session.user.name = token.name as string;
+        (session.user as any).isVerified = token.isVerified as boolean;
         if (token.college) {
           session.user.college = token.college as string;
         }

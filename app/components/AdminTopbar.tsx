@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Bell, User } from "lucide-react";
 
 export default function AdminTopbar() {
   return (
@@ -10,11 +11,16 @@ export default function AdminTopbar() {
       </div>
       <div style={s.right}>
         <button style={s.iconBtn} title="Notifications">
-          <span style={s.icon}>🔔</span>
+          <Bell size={20} />
+          <span style={s.notificationBadge} />
         </button>
         <div style={s.profile}>
           <div style={s.avatar}>
-            <span style={s.avatarText}>AD</span>
+            <User size={20} />
+          </div>
+          <div style={s.adminInfo}>
+            <span style={s.adminName}>Admin</span>
+            <span style={s.adminRole}>Super Admin</span>
           </div>
         </div>
       </div>
@@ -40,50 +46,74 @@ const s: Record<string, React.CSSProperties> = {
     alignItems: "center",
   },
   title: {
-    fontSize: "1.1rem",
-    fontWeight: 600,
+    fontSize: "1.25rem",
+    fontWeight: 700,
     color: "#f8fafc",
     margin: 0,
+    letterSpacing: "-0.02em",
   },
   right: {
     display: "flex",
     alignItems: "center",
-    gap: "1.5rem",
+    gap: "1.25rem",
   },
   iconBtn: {
     background: "transparent",
     border: "none",
     color: "#94a3b8",
-    fontSize: "1.25rem",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    padding: "4px",
-    borderRadius: "6px",
-    transition: "background-color 0.2s, color 0.2s",
-  },
-  icon: {
-    fontSize: "1.2rem",
+    padding: "8px",
+    borderRadius: "8px",
+    transition: "all 0.2s",
+    position: "relative",
+  } as React.CSSProperties,
+  notificationBadge: {
+    position: "absolute",
+    top: "6px",
+    right: "6px",
+    width: "8px",
+    height: "8px",
+    backgroundColor: "#ef4444",
+    borderRadius: "50%",
+    border: "2px solid #0a0a0a",
   },
   profile: {
     display: "flex",
     alignItems: "center",
     gap: "0.75rem",
-  },
+    padding: "4px 8px",
+    borderRadius: "12px",
+    cursor: "pointer",
+    transition: "background-color 0.2s",
+  } as React.CSSProperties,
   avatar: {
     width: "36px",
     height: "36px",
-    borderRadius: "50%",
-    backgroundColor: "#f59e0b",
+    borderRadius: "10px",
+    backgroundColor: "rgba(245,158,11,0.1)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#000",
-    fontWeight: 700,
-    fontSize: "0.85rem",
+    color: "#f59e0b",
+    border: "1px solid rgba(245,158,11,0.2)",
   },
-  avatarText: {
-    letterSpacing: "0.05em",
+  adminInfo: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px",
+  },
+  adminName: {
+    fontSize: "0.875rem",
+    fontWeight: 600,
+    color: "#f8fafc",
+    lineHeight: 1,
+  },
+  adminRole: {
+    fontSize: "0.75rem",
+    color: "#64748b",
+    lineHeight: 1,
   },
 };

@@ -29,6 +29,8 @@ export async function PATCH(
 
     if (status === "approved") {
       await User.findByIdAndUpdate(sellerRequest.userId, { isVerified: true });
+    } else if (status === "rejected") {
+      await User.findByIdAndUpdate(sellerRequest.userId, { isVerified: false });
     }
 
     return NextResponse.json(sellerRequest);

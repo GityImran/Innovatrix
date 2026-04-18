@@ -4,13 +4,21 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { 
+  LayoutDashboard, 
+  UserCheck, 
+  Users, 
+  BarChart3, 
+  Settings, 
+  LogOut 
+} from "lucide-react";
 
 const ADMIN_NAV_ITEMS = [
-  { href: "/dashboard/admin", label: "Dashboard", icon: "📊" },
-  { href: "/dashboard/admin/seller-verification", label: "Seller Verification", icon: "✔️" },
-  { href: "/dashboard/admin/active-sellers", label: "Active Sellers", icon: "👥" },
-  { href: "/dashboard/admin/analytics", label: "Analytics", icon: "📈" },
-  { href: "/dashboard/admin/settings", label: "Settings", icon: "⚙️" },
+  { href: "/dashboard/admin", label: "Dashboard", icon: <LayoutDashboard size={20} /> },
+  { href: "/dashboard/admin/seller-verification", label: "Seller Verification", icon: <UserCheck size={20} /> },
+  { href: "/dashboard/admin/active-sellers", label: "Active Sellers", icon: <Users size={20} /> },
+  { href: "/dashboard/admin/analytics", label: "Analytics", icon: <BarChart3 size={20} /> },
+  { href: "/dashboard/admin/settings", label: "Settings", icon: <Settings size={20} /> },
 ];
 
 interface AdminSidebarProps {
@@ -79,7 +87,7 @@ export default function AdminSidebar({ collapsed, onCollapse }: AdminSidebarProp
           onClick={handleLogout}
           title={collapsed ? "Logout" : undefined}
         >
-          <span style={s.navIcon}>🚪</span>
+          <span style={s.navIcon}><LogOut size={20} /></span>
           {!collapsed && <span>Logout</span>}
         </button>
       </div>
