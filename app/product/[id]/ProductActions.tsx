@@ -156,11 +156,13 @@ export function ProductActions({
           ✨ Added to cart successfully!
         </div>
       )}
+      
+      {/* Row 1: Primary Purchase Actions */}
       <div className="flex gap-4">
         <button 
           onClick={handleAction}
           disabled={actionLoading || cartLoading}
-          className="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-extrabold py-4 px-8 rounded-xl shadow-[0_0_20px_rgba(245,158,11,0.2)] transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
+          className="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-extrabold py-4 px-8 rounded-xl shadow-[0_0_20px_rgba(245,158,11,0.2)] transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
         >
           {actionLoading ? "Processing..." : (type === "sell" ? "Buy Now" : "Request Rental")}
         </button>
@@ -174,21 +176,23 @@ export function ProductActions({
         </button>
       </div>
 
-      <button 
-        onClick={handleChat}
-        disabled={chatLoading}
-        className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 px-8 rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.2)] transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        <MessageCircle size={20} />
-        {chatLoading ? "connecting..." : "Chat With Seller"}
-      </button>
-      
-      <a 
-        href={`mailto:${sellerEmail}?subject=Interested in item: ${productId}`}
-        className="text-center text-slate-500 hover:text-slate-300 transition-colors text-sm flex items-center justify-center gap-2 mt-2"
-      >
-        <Mail size={14} /> Or email {sellerEmail}
-      </a>
+      {/* Row 2: Communication Actions */}
+      <div className="flex gap-4">
+        <button 
+          onClick={handleChat}
+          disabled={chatLoading}
+          className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 px-8 rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.2)] transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          <MessageCircle size={20} />
+          {chatLoading ? "connecting..." : "Chat Now"}
+        </button>
+        <a 
+          href={`mailto:${sellerEmail}?subject=Interested in item id: ${productId}`}
+          className="flex-1 flex items-center justify-center bg-[#111] hover:bg-[#1a1a1a] border border-[#333] text-white font-bold py-4 px-4 rounded-xl transition-all hover:scale-[1.02] active:scale-95 text-center"
+        >
+          <Mail size={18} className="mr-2" /> Contact Email
+        </a>
+      </div>
     </div>
   );
 }
