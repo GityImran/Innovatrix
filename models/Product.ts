@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 export interface IProduct extends Document {
   sellerId: mongoose.Types.ObjectId;
   sellerDomain: string;
+  college?: string;
   category: string;
   title: string;
   description: string;
@@ -25,6 +26,7 @@ const ProductSchema = new Schema<IProduct>(
   {
     sellerId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     sellerDomain: { type: String, default: "", index: true },
+    college: { type: String, index: true },
     category: { type: String, required: true },
     title: { type: String, required: true, trim: true },
     description: { type: String, required: true },

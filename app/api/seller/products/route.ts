@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
       image,
       sellerId: session.user.id,
       sellerDomain,
+      college: session.user.college,
       status: body.status || "active",
     });
 

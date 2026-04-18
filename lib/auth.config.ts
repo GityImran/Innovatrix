@@ -61,6 +61,7 @@ export const authConfig: NextAuthConfig = {
         token.id = user.id;
         token.email = user.email;
         token.name = user.name;
+        token.college = user.college;
       }
       return token;
     },
@@ -70,6 +71,9 @@ export const authConfig: NextAuthConfig = {
         session.user.id = token.id as string;
         session.user.email = token.email as string;
         session.user.name = token.name as string;
+        if (token.college) {
+          session.user.college = token.college as string;
+        }
       }
       return session;
     },
