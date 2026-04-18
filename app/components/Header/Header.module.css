@@ -178,3 +178,48 @@
     transform: translateY(0);
   }
 }
+
+/* ===== Messages badge ===== */
+.messagesLink {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: var(--border-radius-sm);
+  transition: border-color 0.2s;
+  text-decoration: none;
+  color: inherit;
+}
+
+.messagesLink:hover {
+  border-color: var(--text-color);
+}
+
+.unreadBadge {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  line-height: 1;
+  animation: badgePop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 0 0 2px var(--nav-bg);
+  z-index: 10;
+}
+
+@keyframes badgePop {
+  0%   { transform: scale(0); }
+  80%  { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}

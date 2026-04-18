@@ -4,6 +4,7 @@ import styles from './Header.module.css';
 import { auth } from '@/lib/auth';
 import UserAuthDropdown from './UserAuthDropdown';
 import SearchForm from './SearchForm';
+import UnreadBadge from './UnreadBadge';
 
 export default async function Header() {
   const session = await auth();
@@ -28,6 +29,13 @@ export default async function Header() {
 
         <div className={styles.userActions}>
           <UserAuthDropdown session={session} />
+          {session?.user && (
+            <Link href="/chat" className={styles.messagesLink}>
+              <span className={styles.actionLabel}>💬</span>
+              <span className={styles.actionBold}>Messages</span>
+              <UnreadBadge />
+            </Link>
+          )}
           <div className={styles.actionItem}>
             <span className={styles.actionLabel}>Returns</span>
             <span className={styles.actionBold}>& Orders</span>
