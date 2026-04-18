@@ -6,8 +6,9 @@
 
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 /* ── Types ── */
 interface SearchResult {
@@ -36,15 +37,25 @@ function useDebounce<T>(value: T, delay: number): T {
   return debounced;
 }
 
-export default function SearchPage() {
-  const [query, setQuery] = useState("");
+function SearchContent() {
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams.get("q") || "";
+  
+  const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<SearchResult[]>([]);
-  const [loading, setLoading] = useState(true); // true on mount → loads campus items immediately
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [sortBy, setSortBy] = useState<"newest" | "price_asc" | "price_desc">("newest");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const debouncedQuery = useDebounce(query, 500);
+
+  // Sync state if URL changes (e.g. from CategoriesNav)
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (q !== null) setQuery(q);
+  }, [searchParams]);
 
   /* ── Fetch whenever debounced query changes ── */
   useEffect(() => {
@@ -94,8 +105,9 @@ export default function SearchPage() {
 
   /* ── Auto-focus input on mount ── */
   useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+    // Only focus if query is empty to avoid interrupting user if they arrived with a category
+    if (!initialQuery) inputRef.current?.focus();
+  }, [initialQuery]);
 
   const handleClear = useCallback(() => {
     setQuery("");
@@ -103,89 +115,130 @@ export default function SearchPage() {
   }, []);
 
   /* ── Render helpers ── */
+  const sortedResults = [...results].sort((a, b) => {
+    if (sortBy === "price_asc") return a.price - b.price;
+    if (sortBy === "price_desc") return b.price - a.price;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+
   const sellCount = results.filter((r) => r.type === "sell").length;
   const rentCount = results.filter((r) => r.type === "rent").length;
 
   return (
-    <>
+    <div className="search-page-wrapper">
       <style dangerouslySetInnerHTML={{ __html: pageCSS }} />
+      
+      {/* Dynamic Background Elements */}
+      <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-amber-500/10 blur-[180px] rounded-full opacity-30 animate-pulse-slow" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-500/10 blur-[180px] rounded-full opacity-20 animate-pulse-slow delay-1000" />
+      </div>
+
       <div className="search-page-container">
         <Link href="/" className="back-button">
-          ← Back to Home
+          <span className="arrow">←</span> Back to Market
         </Link>
-        {/* ── Header ── */}
-        <div className="search-header">
-          <h1 className="search-title">🔍 Campus Search</h1>
-          <p className="search-subtitle">Items from students in your college only</p>
-        </div>
-
-        {/* ── Search Input ── */}
-        <div className="search-wrap">
-          <div className="search-box">
-            <span className="search-icon">🔍</span>
-            <input
-              ref={inputRef}
-              id="campus-search-input"
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search books, electronics, furniture…"
-              className="search-input"
-              autoComplete="off"
-              spellCheck={false}
-            />
-            {query && (
-              <button
-                id="campus-search-clear"
-                onClick={handleClear}
-                className="clear-btn"
-                aria-label="Clear search"
-              >
-                ✕
-              </button>
-            )}
+        
+        <div className="search-top-bar">
+          {/* ── Header ── */}
+          <div className="search-header">
+            <div className="inline-badge">
+               <span className="dot"></span> Campus Network
+            </div>
+            <h1 className="search-title">Market <span className="text-amber">Search</span></h1>
+            <p className="search-subtitle">Discover items exclusively from your college campus</p>
           </div>
 
-          {/* Status line */}
-          <div className="status-line">
-            {loading && <span>⏳ Searching your campus…</span>}
-            {!loading && !error && hasSearched && results.length > 0 && (
-              <span>
-                {results.length} result{results.length !== 1 ? "s" : ""} —{" "}
-                {sellCount > 0 && `${sellCount} for sale`}
-                {sellCount > 0 && rentCount > 0 && ", "}
-                {rentCount > 0 && `${rentCount} for rent`}
-              </span>
-            )}
+          {/* ── Search Input ── */}
+          <div className="search-wrap">
+            <div className="search-box">
+              <span className="search-icon">🔍</span>
+              <input
+                ref={inputRef}
+                id="campus-search-input"
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="What are you looking for?"
+                className="search-input"
+                autoComplete="off"
+                spellCheck={false}
+              />
+              {query && (
+                <button
+                  id="campus-search-clear"
+                  onClick={handleClear}
+                  className="clear-btn"
+                  aria-label="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Status & Sort line */}
+            <div className="status-line">
+              {loading ? (
+                <span className="loading-dots">Searching campus listings</span>
+              ) : !error && hasSearched && results.length > 0 ? (
+                <div className="controls-row">
+                  <span className="results-badge">
+                    {results.length} found •{" "}
+                    {sellCount > 0 && <span className="sell-stat">{sellCount} Sale</span>}
+                    {sellCount > 0 && rentCount > 0 && " • "}
+                    {rentCount > 0 && <span className="rent-stat">{rentCount} Rent</span>}
+                  </span>
+
+                  <div className="sort-box">
+                    <label htmlFor="sort-dropdown">Sort by:</label>
+                    <select 
+                      id="sort-dropdown"
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as any)}
+                      className="sort-select"
+                    >
+                      <option value="newest">Newest First</option>
+                      <option value="price_asc">Price: Low to High</option>
+                      <option value="price_desc">Price: High to Low</option>
+                    </select>
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
 
         {/* ── Error State ── */}
         {error && (
           <div className="error-box">
-            <span style={{ fontSize: "1.4rem" }}>⚠️</span>
-            <p style={{ margin: 0 }}>{error}</p>
+            <span className="error-icon">⚠️</span>
+            <p className="error-text">{error}</p>
           </div>
         )}
 
         {/* ── Empty State ── */}
         {!loading && !error && hasSearched && results.length === 0 && (
           <div className="empty-state">
-            <div style={{ fontSize: "3.5rem", marginBottom: "0.75rem" }}>📭</div>
-            <p className="empty-title">No items found in your campus</p>
+            <div className="empty-icon">📭</div>
+            <h2 className="empty-title">Nothing Found</h2>
             <p className="empty-desc">
               {query
-                ? `No results for "${query}". Try a different keyword.`
+                ? `We couldn't find anything matching "${query}".`
                 : "Be the first to list something on your campus!"}
             </p>
+            {query && (
+              <button onClick={handleClear} className="reset-btn">
+                Clear Search
+              </button>
+            )}
           </div>
         )}
 
         {/* ── Results Grid ── */}
-        {!loading && results.length > 0 && (
+        {!loading && sortedResults.length > 0 && (
           <div className="product-grid">
-            {results.map((item) => (
-              <ResultCard key={item.id} item={item} />
+            {sortedResults.map((item, idx) => (
+              <ResultCard key={item.id} item={item} index={idx} />
             ))}
           </div>
         )}
@@ -199,20 +252,32 @@ export default function SearchPage() {
           </div>
         )}
       </div>
-    </>
+    </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#050505] text-white p-20">Loading search...</div>}>
+      <SearchContent />
+    </Suspense>
   );
 }
 
 /* ── Result Card ── */
-function ResultCard({ item }: { item: SearchResult }) {
+function ResultCard({ item, index }: { item: SearchResult; index: number }) {
   const isSell = item.type === "sell";
 
   return (
-    <Link href={`/product/${item.id}`} className="product-card">
+    <Link 
+      href={`/product/${item.id}`} 
+      className="product-card"
+      style={{ animationDelay: `${index * 50}ms` }}
+    >
       {/* ── Top-left Badges ── */}
       <div className="badge-container">
         <span className={`badge ${isSell ? "badge-sell" : "badge-rent"}`}>
-          {isSell ? "Sell" : "Rent"}
+          {isSell ? "Sale" : "Rent"}
         </span>
         {item.isUrgent && <span className="badge badge-urgent">Urgent</span>}
       </div>
@@ -224,9 +289,10 @@ function ResultCard({ item }: { item: SearchResult }) {
           <img src={item.image} alt={item.title} className="product-img" />
         ) : (
           <div className="img-placeholder">
-            <span style={{ fontSize: "2.5rem" }}>{isSell ? "📦" : "🔄"}</span>
+            <span className="placeholder-emoji">{isSell ? "📦" : "🔄"}</span>
           </div>
         )}
+        <div className="img-overlay"></div>
       </div>
 
       {/* ── Card Body ── */}
@@ -235,11 +301,14 @@ function ResultCard({ item }: { item: SearchResult }) {
         
         <h3 className="product-title" title={item.title}>{item.title}</h3>
         
-        {item.rating && (
-          <div className="product-rating">
-            <span className="star">★</span> {item.rating.toFixed(1)}
-          </div>
-        )}
+        <div className="meta-row">
+          {item.rating && (
+            <div className="product-rating">
+              <span className="star">★</span> {item.rating.toFixed(1)}
+            </div>
+          )}
+          <span className="time-ago">Added {new Date(item.createdAt).toLocaleDateString()}</span>
+        </div>
         
         <div className="price-container">
           <div className="price-row">
@@ -252,300 +321,471 @@ function ResultCard({ item }: { item: SearchResult }) {
                 ₹{item.originalPrice.toLocaleString("en-IN")}
               </span>
             )}
-            {item.discount && item.discount > 0 ? (
-              <span className="discount-tag">{item.discount}% off</span>
-            ) : null}
           </div>
+          {item.discount && item.discount > 0 ? (
+            <span className="discount-tag">Save {item.discount}%</span>
+          ) : null}
         </div>
       </div>
     </Link>
   );
 }
 
-/* ── Modern Flipkart/Amazon Style CSS ── */
+/* ── Global Transitions & Theme Styles ── */
 const pageCSS = `
+.search-page-wrapper {
+  min-height: 100vh;
+  background: #050505;
+  color: #fff;
+  position: relative;
+  overflow-x: hidden;
+}
+
 .search-page-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem 1.5rem 4rem;
-  font-family: 'Inter', 'Roboto', sans-serif;
-  color: #1a1a1a;
+  padding: 2rem 1.5rem 6rem;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  position: relative;
+  z-index: 10;
 }
 
-/* Header & Search styling updated for light/clean look while retaining structure */
+/* Back Button */
 .back-button {
   display: inline-flex;
   align-items: center;
-  color: #9ca3af;
+  gap: 0.5rem;
+  color: #94a3b8;
   text-decoration: none;
-  font-size: 0.95rem;
-  font-weight: 500;
-  margin-bottom: 1.5rem;
-  transition: color 0.2s ease;
-  align-self: flex-start;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 2rem;
+  transition: all 0.3s ease;
+  padding: 0.4rem 0.8rem;
+  background: rgba(255,255,255,0.03);
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.05);
 }
+
 .back-button:hover {
-  color: #f9fafb;
+  color: #f59e0b;
+  background: rgba(245,158,11,0.08);
+  border-color: rgba(245,158,11,0.2);
+  transform: translateX(-4px);
+}
+
+/* Header Section */
+.search-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 3rem;
+  margin-bottom: 4rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  padding-bottom: 3rem;
 }
 
 .search-header {
-  text-align: center;
-  margin-bottom: 2rem;
+  text-align: left;
+  margin-bottom: 0;
+  flex: 1;
 }
-.search-title {
-  font-size: 3rem;
+
+.inline-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.8rem;
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.15);
+  border-radius: 100px;
+  font-size: 0.65rem;
   font-weight: 800;
-  background: linear-gradient(135deg, #a78bfa, #c084fc, #f472b6);
+  color: #f59e0b;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 1rem;
+}
+
+.dot {
+  width: 5px;
+  height: 5px;
+  background: #f59e0b;
+  border-radius: 50%;
+  animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.5); opacity: 0.5; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.search-title {
+  font-size: 2.8rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  margin: 0;
+  line-height: 1;
+  color: #fff;
+}
+
+.text-amber {
+  color: #f59e0b;
+  background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  text-shadow: 0 4px 20px rgba(192, 132, 252, 0.2);
-  margin: 0;
-  letter-spacing: -0.02em;
 }
+
 .search-subtitle {
-  color: #a1a1aa;
-  font-size: 1.05rem;
-  margin-top: 0.5rem;
-  font-weight: 400;
+  color: #64748b;
+  font-size: 1rem;
+  margin-top: 0.75rem;
+  font-weight: 500;
 }
+
+/* Search Box */
 .search-wrap {
-  max-width: 680px;
-  margin: 0 auto 3rem auto;
+  max-width: 500px;
+  margin: 0;
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
 }
+
 .search-box {
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 9999px;
-  padding: 0.75rem 1.5rem;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  border-radius: 16px;
+  padding: 1rem 1.5rem;
+  box-shadow: 0 15px 30px rgba(0,0,0,0.3);
   gap: 1rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
+
 .search-box:focus-within {
-  border-color: rgba(167, 139, 250, 0.5); /* vibrant purple */
-  box-shadow: 0 0 25px rgba(167, 139, 250, 0.25), inset 0 0 10px rgba(255,255,255,0.02);
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 4px rgba(245,158,11,0.1), 0 15px 30px rgba(0,0,0,0.4);
+  transform: translateY(-2px);
 }
+
 .search-icon {
   font-size: 1.25rem;
-  color: #a1a1aa;
+  opacity: 0.5;
 }
+
 .search-input {
   flex: 1;
   background: transparent;
   border: none;
   outline: none;
-  color: #f8fafc;
+  color: #fff;
   font-size: 1.1rem;
-  padding: 0.5rem 0;
+  font-weight: 600;
 }
-.search-input::placeholder { color: #64748b; }
-.clear-btn {
-  background: none;
-  border: none;
-  color: #9ca3af;
-  cursor: pointer;
-  font-size: 0.85rem;
-  padding: 0.25rem;
-}
-.status-line { text-align: center; font-size: 0.85rem; color: #9ca3af; }
-.error-box { max-width: 520px; margin: 0 auto; background: #fef2f2; border: 1px solid #f87171; border-radius: 12px; padding: 1.25rem; color: #b91c1c; display: flex; gap: 0.75rem; align-items: center; }
-.empty-state { text-align: center; padding: 4rem 2rem; background: #fff; border: 1px dashed #d1d5db; border-radius: 16px; margin-top: 2rem; }
-.empty-title { font-size: 1.1rem; font-weight: 700; color: #111827; margin: 0 0 0.4rem; }
-.empty-desc { color: #6b7280; font-size: 0.85rem; max-width: 320px; margin: 0 auto; }
 
-/* ── Modern Product Grid Layout ── */
+.search-input::placeholder {
+  color: #475569;
+  font-weight: 500;
+}
+
+.clear-btn {
+  background: rgba(255,255,255,0.05);
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 0.7rem;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.clear-btn:hover {
+  background: #f59e0b;
+  color: #000;
+}
+
+.status-line {
+  margin-top: 1rem;
+  text-align: left;
+}
+
+.controls-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.results-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background: rgba(255,255,255,0.03);
+  padding: 0.4rem 1rem;
+  border-radius: 100px;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.sort-box {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sort-select {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  color: #fff;
+  padding: 0.5rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sort-select:hover {
+  background: rgba(245,158,11,0.08);
+  border-color: rgba(245,158,11,0.3);
+}
+
+.sort-select:focus {
+  border-color: #f59e0b;
+}
+
+.sort-select option {
+  background: #111;
+  color: #fff;
+}
+
+.sell-stat { color: #3b82f6; }
+.rent-stat { color: #8b5cf6; }
+
+/* Grid */
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.75rem;
-  animation: gridFadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1.5rem;
+  animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
-@keyframes gridFadeIn {
+@keyframes fadeInUp {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-@media (max-width: 1024px) {
-  .product-grid { grid-template-columns: repeat(2, 1fr); }
-}
-
-@media (max-width: 640px) {
-  .product-grid { grid-template-columns: 1fr; }
-}
-
-/* ── Premium E-commerce Card ── */
+/* Card */
 .product-card {
-  background: rgba(17, 17, 17, 0.65);
-  backdrop-filter: blur(12px);
-  border-radius: 1rem; /* smoother xl corners */
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.06);
   text-decoration: none;
   display: flex;
   flex-direction: column;
+  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
   position: relative;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
+  opacity: 0;
+  animation: fadeInUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
 .product-card:hover {
-  transform: translateY(-8px); /* Elevates the card beautifully */
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.6), 0 0 20px rgba(167, 139, 250, 0.15); /* glowing shadow */
-  border-color: rgba(167, 139, 250, 0.4);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(245, 158, 11, 0.4);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.5);
 }
 
-/* Badges */
 .badge-container {
   position: absolute;
   top: 12px;
   left: 12px;
+  z-index: 20;
   display: flex;
-  flex-direction: column;
   gap: 6px;
-  z-index: 10;
 }
 
 .badge {
+  padding: 4px 10px;
+  border-radius: 8px;
   font-size: 0.65rem;
-  font-weight: 800;
+  font-weight: 900;
   text-transform: uppercase;
-  padding: 5px 12px;
-  border-radius: 6px;
   letter-spacing: 0.05em;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.1);
 }
 
-.badge-sell { background: rgba(59, 130, 246, 0.85); color: #fff; border: 1px solid rgba(59, 130, 246, 0.3); } 
-.badge-rent { background: rgba(139, 92, 246, 0.85); color: #fff; border: 1px solid rgba(139, 92, 246, 0.3); } 
-.badge-urgent { background: rgba(239, 68, 68, 0.9); color: #fff; border: 1px solid rgba(239, 68, 68, 0.3); animation: pulseUrgent 2s infinite; }
+.badge-sell { background: rgba(59, 130, 246, 0.8); color: #fff; }
+.badge-rent { background: rgba(139, 92, 246, 0.8); color: #fff; }
+.badge-urgent { background: rgba(239, 68, 68, 0.9); color: #fff; border-color: rgba(239, 68, 68, 0.3); animation: pulse-red 2s infinite; }
 
-@keyframes pulseUrgent {
+@keyframes pulse-red {
   0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-  70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+  70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
   100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
 
-/* Image Area */
 .img-wrap {
   width: 100%;
-  height: 200px; /* Fixed height */
-  background: #0a0a0a;
-  overflow: hidden;
+  aspect-ratio: 1/1;
+  background: #000;
   position: relative;
+  overflow: hidden;
 }
 
 .product-img {
   width: 100%;
   height: 100%;
-  object-fit: cover; /* Cover */
-  display: block;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.img-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #9ca3af;
+.product-card:hover .product-img {
+  transform: scale(1.1);
 }
 
-/* Card Body */
+.img-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.4), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.product-card:hover .img-overlay { opacity: 1; }
+
 .product-details {
-  padding: 1rem 1.25rem; /* padding 4 */
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
   flex: 1;
 }
 
 .product-category {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #9ca3af; /* Muted text */
-  margin-bottom: 0.35rem;
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #64748b;
   text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 0.5rem;
 }
 
 .product-title {
   font-size: 1rem;
-  font-weight: 500;
-  color: #f3f4f6;
-  margin: 0 0 0.5rem 0;
-  line-height: 1.4;
-  /* Truncate overflow to 2 lines */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-height: 2.8rem; /* Keeps title height consistent even if 1 line */
+  font-weight: 700;
+  color: #f8fafc;
+  margin-bottom: 0.75rem;
+  line-height: 1.3;
+}
+
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
 }
 
 .product-rating {
-  font-size: 0.8rem;
-  color: #9ca3af;
-  margin-bottom: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #f59e0b;
   display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.time-ago {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.price-container {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
 }
 
-.star { color: #fbbf24; margin-right: 3px; font-size: 0.9rem; }
-
-.price-container {
-  margin-top: auto; /* pushes price to the bottom */
-  padding-top: 0.5rem;
-}
-
-.price-row {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-
 .current-price {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #f9fafb; /* bold */
-}
-
-.price-unit {
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: #6b7280;
-  margin-left: 2px;
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #fff;
 }
 
 .original-price {
-  font-size: 0.85rem;
-  color: #9ca3af;
-  text-decoration: line-through; /* strikethrough */
+  font-size: 0.8rem;
+  color: #475569;
+  text-decoration: line-through;
+  margin-left: 6px;
 }
 
 .discount-tag {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #16a34a; /* green */
+  font-size: 0.65rem;
+  font-weight: 900;
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(34, 197, 94, 0.1);
 }
 
-/* Skeleton Loading */
+/* Empty States */
+.empty-state {
+  text-align: left;
+  padding: 4rem 2.5rem;
+  background: rgba(255,255,255,0.02);
+  border: 1px dashed rgba(255,255,255,0.08);
+  border-radius: 24px;
+}
+
+.empty-icon { font-size: 3rem; margin-bottom: 1.5rem; }
+.empty-title { font-size: 1.75rem; font-weight: 900; margin-bottom: 0.75rem; }
+.empty-desc { color: #64748b; font-size: 1rem; max-width: 400px; margin: 0 0 2rem; }
+
+.reset-btn {
+  background: #fff;
+  color: #000;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.reset-btn:hover {
+  background: #f59e0b;
+  transform: scale(1.05);
+  box-shadow: 0 10px 30px rgba(245,158,11,0.3);
+}
+
+/* Skeleton */
 .skeleton-card {
-  height: 340px;
-  border-radius: 0.5rem;
-  background: #111111;
-  border: 1px solid #2a2a2a;
+  height: 380px;
+  background: rgba(255,255,255,0.02);
+  border-radius: 20px;
   position: relative;
   overflow: hidden;
 }
@@ -553,13 +793,47 @@ const pageCSS = `
 .skeleton-card::after {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
   animation: shimmer 1.5s infinite;
 }
 
 @keyframes shimmer {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
+}
+
+@keyframes pulse-slow {
+  0%, 100% { transform: scale(1); opacity: 0.2; }
+  50% { transform: scale(1.1); opacity: 0.3; }
+}
+
+.loading-dots::after {
+  content: '...';
+  display: inline-block;
+  width: 20px;
+  text-align: left;
+  animation: dots 1.5s infinite;
+}
+
+@keyframes dots {
+  0% { content: ''; }
+  33% { content: '.'; }
+  66% { content: '..'; }
+  100% { content: '...'; }
+}
+
+@media (max-width: 1024px) {
+  .search-top-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2rem;
+  }
+  .search-wrap { max-width: 100%; }
+}
+
+@media (max-width: 768px) {
+  .search-title { font-size: 2.2rem; }
+  .product-grid { grid-template-columns: 1fr; }
 }
 `;

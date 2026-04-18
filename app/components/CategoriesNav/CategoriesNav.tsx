@@ -43,15 +43,19 @@ export default function CategoriesNav() {
       </nav>
       <nav className={styles.subnav}>
         <div className={`container ${styles.navList}`}>
-          {categories.map((cat, idx) => (
-            <Link
-              key={idx}
-              href="#"
-              className={`${styles.navItem} ${idx === 0 || idx === categories.length - 1 ? styles.highlight : ''}`}
-            >
-              {cat}
-            </Link>
-          ))}
+          {categories.map((cat, idx) => {
+            const isAll = idx === 0;
+            const searchLabel = isAll ? "" : cat;
+            return (
+              <Link
+                key={idx}
+                href={isAll ? "/search" : `/search?q=${encodeURIComponent(searchLabel)}`}
+                className={`${styles.navItem} ${idx === 0 || idx === categories.length - 1 ? styles.highlight : ''}`}
+              >
+                {cat}
+              </Link>
+            );
+          })}
         </div>
       </nav>
     </>
