@@ -132,6 +132,25 @@ app.prepare().then(() => {
 
   const PORT = process.env.PORT || 3000;
   server.listen(PORT, () => {
-    console.log(`> Server running on http://localhost:${PORT}`);
+    const os = require('os');
+    const networkInterfaces = os.networkInterfaces();
+    let networkIP = '';
+    
+    for (const name of Object.keys(networkInterfaces)) {
+      for (const net of networkInterfaces[name]) {
+        if (net.family === 'IPv4' && !net.internal) {
+          networkIP = net.address;
+        }
+      }
+    }
+
+    console.log();
+    console.log(`  ▲ Next.js (Custom Socket Server)`);
+    console.log(`  - Local:        http://localhost:${PORT}`);
+    if (networkIP) {
+      console.log(`  - Network:      http://${networkIP}:${PORT}`);
+    }
+    console.log(`  - Environments: loaded from .env`);
+    console.log();
   });
 });

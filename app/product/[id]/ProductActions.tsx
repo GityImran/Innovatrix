@@ -29,6 +29,7 @@ export function ProductActions({
   const router = useRouter();
   const [actionLoading, setActionLoading] = useState(false);
   const [cartState, setCartState] = useState<"idle" | "loading" | "success">("idle");
+  const [chatLoading, setChatLoading] = useState(false);
 
   const isSoldOut   = status !== "active";
   const isOwnProduct = session?.user?.id === sellerId;
@@ -89,6 +90,31 @@ export function ProductActions({
     } catch (err: any) {
       alert(err.message);
       setCartState("idle");
+    }
+  };
+
+  /* ── Chat with seller ────────────────────── */
+  const handleChat = async () => {
+    if (!session) { router.push("/login"); return; }
+    setChatLoading(true);
+    try {
+      const res = await fetch("/api/conversation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemId: productId, sellerId }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        alert(d.error || "Failed to start chat");
+        return;
+      }
+      const convo = await res.json();
+      router.push(`/chat/${convo._id}`);
+    } catch (err: any) {
+      console.error("Chat button error:", err);
+      alert("Could not start conversation. Please try again.");
+    } finally {
+      setChatLoading(false);
     }
   };
 
@@ -178,29 +204,60 @@ export function ProductActions({
         </button>
       </div>
 
-      {/* Secondary — Email seller */}
-      <a
-        href={`mailto:${sellerEmail}?subject=Interested in: ${encodeURIComponent(title)}`}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: "8px",
-          padding: "13px 24px",
-          borderRadius: "14px",
-          border: "1px solid rgba(255,255,255,0.07)",
-          background: "rgba(255,255,255,0.02)",
-          color: "#64748b",
-          fontSize: "13px",
-          fontWeight: 600,
-          textDecoration: "none",
-          transition: "color 0.2s, background 0.2s",
-        }}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#94a3b8"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)"; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "#64748b"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.02)"; }}
-      >
-        ✉️ Email the seller
-      </a>
+      {/* Secondary row */}
+      <div style={{ display: "flex", gap: "10px" }}>
+        {/* Chat with seller */}
+        <button
+          onClick={handleChat}
+          disabled={chatLoading}
+          style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+            padding: "13px 24px",
+            borderRadius: "14px",
+            border: "1px solid rgba(255,255,255,0.07)",
+            background: "rgba(255,255,255,0.02)",
+            color: "#64748b",
+            fontSize: "13px",
+            fontWeight: 600,
+            textDecoration: "none",
+            transition: "color 0.2s, background 0.2s",
+            cursor: chatLoading ? "not-allowed" : "pointer",
+          }}
+          onMouseEnter={e => { if (!chatLoading) { (e.currentTarget as HTMLElement).style.color = "#94a3b8"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)"; } }}
+          onMouseLeave={e => { if (!chatLoading) { (e.currentTarget as HTMLElement).style.color = "#64748b"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.02)"; } }}
+        >
+          💬 {chatLoading ? "Starting…" : "Chat with seller"}
+        </button>
+
+        {/* Email seller */}
+        <a
+          href={`mailto:${sellerEmail}?subject=Interested in: ${encodeURIComponent(title)}`}
+          style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+            padding: "13px 24px",
+            borderRadius: "14px",
+            border: "1px solid rgba(255,255,255,0.07)",
+            background: "rgba(255,255,255,0.02)",
+            color: "#64748b",
+            fontSize: "13px",
+            fontWeight: 600,
+            textDecoration: "none",
+            transition: "color 0.2s, background 0.2s",
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#94a3b8"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)"; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "#64748b"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.02)"; }}
+        >
+          ✉️ Email the seller
+        </a>
+      </div>
 
     </div>
   );
