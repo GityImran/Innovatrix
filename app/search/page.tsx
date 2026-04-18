@@ -7,6 +7,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
 
 /* ── Types ── */
 interface SearchResult {
@@ -198,7 +199,8 @@ function ResultCard({ item }: { item: SearchResult }) {
   const isSell = item.type === "sell";
 
   return (
-    <div style={s.card}>
+    <Link href={`/product/${item.id}`} style={{ textDecoration: "none" }}>
+      <div style={s.card}>
       {/* Image area */}
       <div style={s.imgWrap}>
         {item.image ? (
@@ -239,6 +241,7 @@ function ResultCard({ item }: { item: SearchResult }) {
         </p>
       </div>
     </div>
+    </Link>
   );
 }
 
@@ -358,7 +361,8 @@ const s: Record<string, React.CSSProperties> = {
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
-    transition: "border-color 0.2s",
+    transition: "border-color 0.2s, transform 0.2s",
+    cursor: "pointer"
   },
   imgWrap: {
     position: "relative",
