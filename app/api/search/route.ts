@@ -124,7 +124,7 @@ export async function GET(req: NextRequest) {
         price: p.expectedPrice ?? 0,
         priceType: "total" as const,
         type: "sell" as const,
-        image: p.images?.[0] ?? null,
+        image: p.image?.url ?? null,
         sellerEmail: p.sellerDomain
           ? `seller@${p.sellerDomain}`
           : `@${userDomain}`,
@@ -141,7 +141,7 @@ export async function GET(req: NextRequest) {
         price: r.pricing?.day ?? 0,
         priceType: "per_day" as const,
         type: "rent" as const,
-        image: r.images?.[0] ?? null,
+        image: r.image?.url ?? null,
         sellerEmail: r.sellerDomain
           ? `seller@${r.sellerDomain}`
           : `@${userDomain}`,

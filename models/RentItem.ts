@@ -17,7 +17,10 @@ export interface IRentItem extends Document {
     till: Date;
   };
   securityDeposit?: number;
-  images: string[];
+  image: {
+    url: string;
+    public_id: string;
+  };
   isUrgent: boolean;
   allowNegotiation: boolean;
   status: "active" | "rented" | "unavailable";
@@ -43,7 +46,10 @@ const RentItemSchema = new Schema<IRentItem>(
       till: { type: Date, required: true },
     },
     securityDeposit: { type: Number },
-    images: { type: [String], required: true },
+    image: {
+      url: { type: String, required: true },
+      public_id: { type: String, required: true },
+    },
     isUrgent: { type: Boolean, default: false },
     allowNegotiation: { type: Boolean, default: false },
     status: {

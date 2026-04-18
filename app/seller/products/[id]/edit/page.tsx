@@ -15,6 +15,7 @@ import React, {
   FormEvent,
 } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { uploadImage } from "@/lib/upload";
 // import {
 //   getProductById,
 //   updateProduct,
@@ -35,6 +36,8 @@ interface ImagePreview {
   id: string;
   dataUrl: string;
   isExisting?: boolean;
+  file?: File;
+  publicId?: string;
 }
 
 interface FormErrors {
@@ -100,13 +103,16 @@ export default function EditProductPage() {
         setCondition(product.condition);
         setOriginalPrice(product.originalPrice?.toString() ?? "");
         setExpectedPrice(product.expectedPrice.toString());
-        setImages(
-          (product.images as string[]).map((dataUrl, i) => ({
-            id: `existing-${i}`,
-            dataUrl,
-            isExisting: true,
-          }))
-        );
+        if (product.image) {
+          setImages([
+            {
+              id: "existing-0",
+              dataUrl: product.image.url,
+              publicId: product.image.public_id,
+              isExisting: true,
+            },
+          ]);
+        }
         setIsUrgent(product.isUrgent);
         setIsBundle(product.isBundle);
         setBundleTitle(product.bundleTitle ?? "");
@@ -139,6 +145,7 @@ export default function EditProductPage() {
       validFiles.map(async (file) => ({
         id: `${Date.now()}-${Math.random()}`,
         dataUrl: await readAsDataUrl(file),
+        file,
       }))
     );
     setImages((prev) => [...prev, ...previews]);
@@ -192,6 +199,15 @@ export default function EditProductPage() {
     if (!validate()) return;
     setSubmitting(true);
     try {
+      let imageData = { url: "", public_id: "" };
+
+      if (images[0].isExisting) {
+        imageData = { url: images[0].dataUrl, public_id: images[0].publicId || "" };
+      } else if (images[0].file) {
+        const uploadRes = await uploadImage(images[0].file);
+        imageData = { url: uploadRes.imageUrl, public_id: uploadRes.publicId };
+      }
+
       const res = await fetch(`/api/seller/products/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -202,7 +218,7 @@ export default function EditProductPage() {
           condition: condition as "new" | "good" | "used",
           originalPrice: originalPrice ? Number(originalPrice) : undefined,
           expectedPrice: Number(expectedPrice),
-          images: images.map((i) => i.dataUrl),
+          image: imageData,
           isUrgent,
           isBundle,
           bundleTitle: isBundle ? bundleTitle.trim() : undefined,
@@ -512,11 +528,30 @@ const s: Record<string, React.CSSProperties> = {
   },
   radioRow: { display: "flex", gap: "0.75rem", flexWrap: "wrap" },
   radioCard: {
-    flex: "1 1 140px", display: "flex", alignItems: "center", gap: "0.75rem",
-    padding: "0.9rem 1rem", backgroundColor: "#0a0a0a", border: "1px solid #2a2a2a",
-    borderRadius: "10px", cursor: "pointer", transition: "all 0.2s", userSelect: "none",
+    flex: "1 1 140px",
+    display: "flex",
+    alignItems: "center",
+    gap: "0.75rem",
+    padding: "0.9rem 1rem",
+    backgroundColor: "#0a0a0a",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "#2a2a2a",
+    borderRadius: "10px",
+    cursor: "pointer",
+    transition: "all 0.2s",
+    userSelect: "none",
   },
-  radioDot: { width: "16px", height: "16px", borderRadius: "50%", border: "2px solid #444", flexShrink: 0, transition: "all 0.2s" },
+  radioDot: {
+    width: "16px",
+    height: "16px",
+    borderRadius: "50%",
+    borderWidth: "2px",
+    borderStyle: "solid",
+    borderColor: "#444",
+    flexShrink: 0,
+    transition: "all 0.2s",
+  },
   radioLabel: { fontSize: "0.875rem", fontWeight: 700, color: "#94a3b8", margin: 0, lineHeight: 1.2 },
   radioDesc: { fontSize: "0.7rem", color: "#4b5563", margin: "0.1rem 0 0" },
   priceRow: { display: "flex", gap: "1rem", flexWrap: "wrap" },

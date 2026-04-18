@@ -9,7 +9,10 @@ export interface IProduct extends Document {
   condition: "new" | "good" | "used";
   originalPrice?: number;
   expectedPrice: number;
-  images: string[];
+  image: {
+    url: string;
+    public_id: string;
+  };
   isUrgent: boolean;
   isBundle: boolean;
   bundleTitle?: string;
@@ -28,7 +31,10 @@ const ProductSchema = new Schema<IProduct>(
     condition: { type: String, enum: ["new", "good", "used"], required: true },
     originalPrice: { type: Number },
     expectedPrice: { type: Number, required: true },
-    images: { type: [String], required: true },
+    image: {
+      url: { type: String, required: true },
+      public_id: { type: String, required: true },
+    },
     isUrgent: { type: Boolean, default: false },
     isBundle: { type: Boolean, default: false },
     bundleTitle: { type: String },

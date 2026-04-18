@@ -14,6 +14,7 @@ import React, {
   FormEvent,
 } from "react";
 import { useRouter } from "next/navigation";
+import { uploadImage } from "@/lib/upload";
 
 type Condition = "new" | "good" | "used";
 type Category =
@@ -28,6 +29,7 @@ type Category =
 interface ImagePreview {
   id: string;
   dataUrl: string;
+  file: File;
 }
 
 interface FormErrors {
@@ -90,6 +92,7 @@ export default function RentItemPage() {
       valid.map(async (file) => ({
         id: `${Date.now()}-${Math.random()}`,
         dataUrl: await readAsDataUrl(file),
+        file,
       }))
     );
     setImages((prev) => [...prev, ...previews]);
@@ -149,28 +152,34 @@ export default function RentItemPage() {
     if (!validate()) return;
     setSubmitting(true);
 
-    const payload = {
-      category,
-      title: title.trim(),
-      description: description.trim(),
-      condition,
-      pricing: {
-        pricePerDay: Number(pricePerDay),
-        pricePerWeek: pricePerWeek ? Number(pricePerWeek) : undefined,
-        pricePerMonth: pricePerMonth ? Number(pricePerMonth) : undefined,
-      },
-      availability: {
-        from: new Date(availableFrom),
-        till: new Date(availableTill),
-      },
-      securityDeposit: securityDeposit ? Number(securityDeposit) : undefined,
-      images: images.map((i) => i.dataUrl),
-      isUrgent,
-      allowNegotiation,
-      status: "active" as const,
-    };
-
     try {
+      // 1. Upload first image to Cloudinary
+      const uploadRes = await uploadImage(images[0].file);
+
+      const payload = {
+        category,
+        title: title.trim(),
+        description: description.trim(),
+        condition,
+        pricing: {
+          day: Number(pricePerDay),
+          week: pricePerWeek ? Number(pricePerWeek) : undefined,
+          month: pricePerMonth ? Number(pricePerMonth) : undefined,
+        },
+        availability: {
+          from: new Date(availableFrom),
+          till: new Date(availableTill),
+        },
+        securityDeposit: securityDeposit ? Number(securityDeposit) : undefined,
+        image: {
+          url: uploadRes.imageUrl,
+          public_id: uploadRes.publicId,
+        },
+        isUrgent,
+        allowNegotiation,
+        status: "active" as const,
+      };
+
       const res = await fetch("/api/seller/rent-items", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -586,7 +595,9 @@ const s: Record<string, React.CSSProperties> = {
     width: "100%",
     padding: "0.68rem 1rem",
     backgroundColor: "#0a0a0a",
-    border: "1px solid #262626",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "#262626",
     borderRadius: "8px",
     color: "#f1f5f9",
     fontSize: "0.875rem",
@@ -606,7 +617,9 @@ const s: Record<string, React.CSSProperties> = {
     width: "100%",
     padding: "0.68rem 1rem",
     backgroundColor: "#0a0a0a",
-    border: "1px solid #262626",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "#262626",
     borderRadius: "8px",
     color: "#f1f5f9",
     fontSize: "0.875rem",
@@ -636,7 +649,9 @@ const s: Record<string, React.CSSProperties> = {
     gap: "0.7rem",
     padding: "0.85rem 1rem",
     backgroundColor: "#0a0a0a",
-    border: "1px solid #262626",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "#262626",
     borderRadius: "10px",
     cursor: "pointer",
     transition: "all 0.15s",
@@ -646,7 +661,9 @@ const s: Record<string, React.CSSProperties> = {
     width: "15px",
     height: "15px",
     borderRadius: "50%",
-    border: "2px solid #444",
+    borderWidth: "2px",
+    borderStyle: "solid",
+    borderColor: "#444",
     flexShrink: 0,
     transition: "all 0.15s",
   },
@@ -655,7 +672,9 @@ const s: Record<string, React.CSSProperties> = {
 
   /* dropzone */
   dropzone: {
-    border: "2px dashed #292929",
+    borderWidth: "2px",
+    borderStyle: "dashed",
+    borderColor: "#292929",
     borderRadius: "12px",
     padding: "2.25rem",
     textAlign: "center",

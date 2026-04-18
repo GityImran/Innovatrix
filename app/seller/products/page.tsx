@@ -11,7 +11,10 @@ interface Product {
   condition: "new" | "good" | "used";
   originalPrice?: number;
   expectedPrice: number;
-  images: string[];
+  image: {
+    url: string;
+    public_id: string;
+  };
   isUrgent: boolean;
   isBundle: boolean;
   bundleTitle?: string;
@@ -35,7 +38,10 @@ interface RentItem {
     till: string;
   };
   securityDeposit?: number;
-  images: string[];
+  image: {
+    url: string;
+    public_id: string;
+  };
   isUrgent: boolean;
   allowNegotiation: boolean;
   status: "active" | "rented" | "unavailable";
@@ -243,9 +249,9 @@ export default function ListedProductsPage() {
                 return (
                   <div key={product._id} style={s.card}>
                     <div style={s.imgWrap}>
-                      {product.images.length > 0 ? (
+                      {product.image && product.image.url ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={product.images[0]} alt={product.title} style={s.img} />
+                        <img src={product.image.url} alt={product.title} style={s.img} />
                       ) : (
                         <div style={s.imgPlaceholder}>
                           <span style={{ fontSize: "3rem" }}>📦</span>
@@ -359,9 +365,9 @@ export default function ListedProductsPage() {
                 return (
                   <div key={item._id} style={s.card}>
                     <div style={s.imgWrap}>
-                      {item.images.length > 0 ? (
+                      {item.image && item.image.url ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={item.images[0]} alt={item.title} style={s.img} />
+                        <img src={item.image.url} alt={item.title} style={s.img} />
                       ) : (
                         <div style={s.imgPlaceholder}>
                           <span style={{ fontSize: "3rem" }}>🔄</span>

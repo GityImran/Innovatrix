@@ -14,6 +14,7 @@ import React, {
   FormEvent,
 } from "react";
 import { useRouter } from "next/navigation";
+import { uploadImage } from "@/lib/upload";
 
 type Condition = "new" | "good" | "used" | "";
 type Category =
@@ -141,6 +142,9 @@ export default function AddProductPage() {
     setSubmitting(true);
 
     try {
+      // 1. Upload the first image to Cloudinary
+      const uploadRes = await uploadImage(images[0].file);
+
       const res = await fetch("/api/seller/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -151,7 +155,10 @@ export default function AddProductPage() {
           condition,
           originalPrice: originalPrice ? Number(originalPrice) : undefined,
           expectedPrice: Number(expectedPrice),
-          images: images.map((i) => i.dataUrl),
+          image: {
+            url: uploadRes.imageUrl,
+            public_id: uploadRes.publicId,
+          },
           isUrgent,
           isBundle,
           bundleTitle: isBundle ? bundleTitle.trim() : undefined,
@@ -175,6 +182,13 @@ export default function AddProductPage() {
   const saveAsDraft = async () => {
     setSubmitting(true);
     try {
+      // Upload first image if exists
+      let imageData = { url: "", public_id: "" };
+      if (images.length > 0) {
+        const uploadRes = await uploadImage(images[0].file);
+        imageData = { url: uploadRes.imageUrl, public_id: uploadRes.publicId };
+      }
+
       const res = await fetch("/api/seller/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -185,7 +199,7 @@ export default function AddProductPage() {
           condition: condition || "used",
           originalPrice: originalPrice ? Number(originalPrice) : undefined,
           expectedPrice: Number(expectedPrice) || 0,
-          images: images.map((i) => i.dataUrl),
+          image: imageData,
           isUrgent,
           isBundle,
           bundleTitle: isBundle ? bundleTitle : undefined,
@@ -687,7 +701,9 @@ const s: Record<string, React.CSSProperties> = {
     width: "100%",
     padding: "0.7rem 1rem",
     backgroundColor: "#0a0a0a",
-    border: "1px solid #2a2a2a",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "#2a2a2a",
     borderRadius: "8px",
     color: "#f8fafc",
     fontSize: "0.875rem",
@@ -720,7 +736,9 @@ const s: Record<string, React.CSSProperties> = {
     width: "100%",
     padding: "0.7rem 1rem",
     backgroundColor: "#0a0a0a",
-    border: "1px solid #2a2a2a",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "#2a2a2a",
     borderRadius: "8px",
     color: "#f8fafc",
     fontSize: "0.875rem",
@@ -734,7 +752,9 @@ const s: Record<string, React.CSSProperties> = {
     width: "100%",
     padding: "0.7rem 1rem",
     backgroundColor: "#0a0a0a",
-    border: "1px solid #2a2a2a",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "#2a2a2a",
     borderRadius: "8px",
     color: "#f8fafc",
     fontSize: "0.875rem",
@@ -760,7 +780,9 @@ const s: Record<string, React.CSSProperties> = {
     gap: "0.75rem",
     padding: "0.9rem 1rem",
     backgroundColor: "#0a0a0a",
-    border: "1px solid #2a2a2a",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "#2a2a2a",
     borderRadius: "10px",
     cursor: "pointer",
     transition: "all 0.2s",
@@ -770,7 +792,9 @@ const s: Record<string, React.CSSProperties> = {
     width: "16px",
     height: "16px",
     borderRadius: "50%",
-    border: "2px solid #444",
+    borderWidth: "2px",
+    borderStyle: "solid",
+    borderColor: "#444",
     flexShrink: 0,
     transition: "all 0.2s",
   },
@@ -813,7 +837,9 @@ const s: Record<string, React.CSSProperties> = {
   },
   /* Images */
   dropzone: {
-    border: "2px dashed #2a2a2a",
+    borderWidth: "2px",
+    borderStyle: "dashed",
+    borderColor: "#2a2a2a",
     borderRadius: "12px",
     padding: "2.5rem",
     textAlign: "center",
