@@ -374,6 +374,8 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
               status={product.status || 'active'}
               title={product.title}
               image={product.image?.url || ''}
+              category={product.category}
+              condition={product.condition}
             />
 
           </div>{/* end RIGHT */}

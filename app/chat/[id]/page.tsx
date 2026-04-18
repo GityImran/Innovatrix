@@ -20,7 +20,7 @@ export default async function ChatPage({ params }: ChatPageProps) {
   await connectToDatabase();
 
   const conversation = await Conversation.findById(id)
-    .populate('itemId', 'title image expectedPrice')
+    .populate('itemId', 'title image expectedPrice category condition')
     .populate('buyerId', 'name email')
     .populate('sellerId', 'name email')
     .lean() as any;
@@ -39,6 +39,9 @@ export default async function ChatPage({ params }: ChatPageProps) {
 
   const otherUser = isBuyer ? conversation.sellerId : conversation.buyerId;
   const itemTitle = conversation.itemId?.title || 'Unknown Item';
+  const itemCategory = conversation.itemId?.category || '';
+  const itemCondition = conversation.itemId?.condition || '';
+  const itemPrice = conversation.itemId?.expectedPrice || 0;
 
   return (
     <ChatRoom
@@ -46,6 +49,9 @@ export default async function ChatPage({ params }: ChatPageProps) {
       currentUserId={userId}
       otherUserName={otherUser?.name || 'Unknown'}
       itemTitle={itemTitle}
+      itemCategory={itemCategory}
+      itemCondition={itemCondition}
+      itemPrice={itemPrice}
     />
   );
 }

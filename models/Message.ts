@@ -3,7 +3,13 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 export interface IMessage extends Document {
   conversationId: mongoose.Types.ObjectId;
   senderId: mongoose.Types.ObjectId;
-  message: string;
+  message?: string;
+  type: "text" | "offer" | "counter" | "system";
+  offerData?: {
+    price: number;
+    status: "pending" | "accepted" | "rejected" | "countered";
+  };
+  isRead: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,7 +28,22 @@ const MessageSchema = new Schema<IMessage>(
     },
     message: {
       type: String,
-      required: true,
+    },
+    type: {
+      type: String,
+      enum: ["text", "offer", "counter", "system"],
+      default: "text",
+    },
+    offerData: {
+      price: { type: Number },
+      status: {
+        type: String,
+        enum: ["pending", "accepted", "rejected", "countered"],
+      },
+    },
+    isRead: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true }

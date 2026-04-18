@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { NegotiationModal } from "@/app/components/NegotiationModal/NegotiationModal";
 
 interface ProductActionsProps {
   productId: string;
@@ -13,6 +14,8 @@ interface ProductActionsProps {
   status: string;
   title: string;
   image: string;
+  category: string;
+  condition: string;
 }
 
 export function ProductActions({
@@ -24,35 +27,41 @@ export function ProductActions({
   status,
   title,
   image,
+  category,
+  condition,
 }: ProductActionsProps) {
   const { data: session } = useSession();
   const router = useRouter();
   const [actionLoading, setActionLoading] = useState(false);
   const [cartState, setCartState] = useState<"idle" | "loading" | "success">("idle");
   const [chatLoading, setChatLoading] = useState(false);
+  const [isNegModalOpen, setIsNegModalOpen] = useState(false);
 
   const isSoldOut   = status !== "active";
   const isOwnProduct = session?.user?.id === sellerId;
 
-  /* ── Buy / Rent ─────────────────────────── */
+  /* ── Buy / Rent (Direct Checkout) ─────────────────────────── */
   const handleAction = async () => {
     if (!session) { router.push("/login"); return; }
     setActionLoading(true);
     try {
-      const res = await fetch("/api/orders", {
+      // Step 1: Add to cart first to ensure it's in the checkout flow
+      const res = await fetch("/api/cart", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           itemId: productId,
           itemModel: type === "sell" ? "Product" : "RentItem",
-          sellerId,
-          totalAmount: price,
-          orderType: type === "sell" ? "buy" : "rent",
         }),
       });
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Failed"); }
-      alert(type === "sell" ? "Order placed!" : "Rental requested!");
-      router.push("/dashboard");
+
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Failed to initiate checkout");
+      }
+
+      // Step 2: Redirect to cart page which handles the checkout steps
+      router.push("/cart");
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -206,6 +215,36 @@ export function ProductActions({
 
       {/* Secondary row */}
       <div style={{ display: "flex", gap: "10px" }}>
+        {/* Negotiate Button */}
+        {type === "sell" && (
+          <button
+            onClick={() => {
+              if (!session) { router.push("/login"); return; }
+              setIsNegModalOpen(true);
+            }}
+            style={{
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              padding: "13px 24px",
+              borderRadius: "14px",
+              border: "1px solid rgba(245,158,11,0.2)",
+              background: "rgba(245,158,11,0.05)",
+              color: "#f59e0b",
+              fontSize: "13px",
+              fontWeight: 600,
+              transition: "all 0.2s",
+              cursor: "pointer",
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(245,158,11,0.1)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(245,158,11,0.05)"; }}
+          >
+            💰 Negotiate Price
+          </button>
+        )}
+
         {/* Chat with seller */}
         <button
           onClick={handleChat}
@@ -259,6 +298,16 @@ export function ProductActions({
         </a>
       </div>
 
+      <NegotiationModal
+        isOpen={isNegModalOpen}
+        onClose={() => setIsNegModalOpen(false)}
+        productId={productId}
+        sellerId={sellerId}
+        productTitle={title}
+        productCategory={category}
+        productCondition={condition}
+        currentPrice={price}
+      />
     </div>
   );
 }
