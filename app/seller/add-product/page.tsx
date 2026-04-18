@@ -15,6 +15,7 @@ import React, {
 } from "react";
 import { useRouter } from "next/navigation";
 import { uploadImage } from "@/lib/upload";
+import { FairPriceChecker } from "@/app/components/FairPriceChecker/FairPriceChecker";
 
 type Condition = "new" | "good" | "used" | "";
 type Category =
@@ -431,6 +432,15 @@ export default function AddProductPage() {
               )}
             </div>
           </div>
+
+          {/* Fair Price Checker */}
+          <FairPriceChecker
+            title={title}
+            category={category}
+            condition={condition}
+            price={Number(expectedPrice)}
+            mode="seller"
+          />
 
           {/* Discount badge preview */}
           {originalPrice &&

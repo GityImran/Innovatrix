@@ -3,7 +3,9 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Header from '../../components/Header/Header';
 import Footer from '../../components/Footer/Footer';
-import { getMockProductById } from '../../../lib/mockProducts';
+import { connectToDatabase } from '@/lib/mongodb';
+import Product from '@/models/Product';
+import { FairPriceChecker } from '@/app/components/FairPriceChecker/FairPriceChecker';
 
 interface ProductPageProps {
   params: Promise<{
@@ -14,7 +16,9 @@ interface ProductPageProps {
 // NextJS 13+ App Router generates pages like this
 export default async function ProductDetailPage({ params }: ProductPageProps) {
   const { id } = await params;
-  const product = getMockProductById(id);
+  
+  await connectToDatabase();
+  const product = await Product.findById(id).lean();
 
   if (!product) {
     notFound();
@@ -35,22 +39,13 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
           {/* Left Column - Image Viewer */}
           <div className="flex flex-col gap-4">
             <div 
-              className="w-full aspect-square rounded-2xl flex items-center justify-center text-[10rem] shadow-lg shadow-black/50 border border-slate-800"
-              style={{ backgroundColor: product.color }}
+              className="w-full aspect-square rounded-2xl flex items-center justify-center shadow-lg shadow-black/50 border border-slate-800 overflow-hidden"
             >
-              {product.emoji}
-            </div>
-            {/* Thumbnails placeholder */}
-            <div className="flex gap-4 overflow-x-auto pb-2">
-              {[1, 2, 3].map((i) => (
-                <div 
-                  key={i} 
-                  className={`w-24 h-24 rounded-lg flex items-center justify-center text-4xl cursor-pointer border-2 ${i === 1 ? 'border-amber-500' : 'border-slate-800 hover:border-slate-600'}`}
-                  style={{ backgroundColor: product.color }}
-                >
-                  {product.emoji}
-                </div>
-              ))}
+              {product.image?.url ? (
+                <img src={product.image.url} alt={product.title} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-[10rem]">📦</span>
+              )}
             </div>
           </div>
 
@@ -58,33 +53,24 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
           <div className="flex flex-col">
             <div className="mb-2">
               <span className="inline-block px-3 py-1 text-xs font-semibold rounded-full bg-slate-800 text-slate-300 border border-slate-700">
-                {product.id.startsWith('tb') ? 'Textbooks' : 'Electronics & Lab'}
+                {product.category}
               </span>
             </div>
 
-            <h1 className="text-3xl md:text-5xl font-bold mb-4 tracking-tight leading-tight">{product.name}</h1>
+            <h1 className="text-3xl md:text-5xl font-bold mb-4 tracking-tight leading-tight">{product.title}</h1>
             
-            <div className="flex items-center gap-4 mb-6">
-              <div className="flex gap-1 text-amber-400">
-                <span>★</span><span>★</span><span>★</span><span>★</span><span className="text-slate-600">★</span>
-              </div>
-              <span className="text-sm text-slate-400">(12 Reviews)</span>
-            </div>
-
             <div className="bg-slate-900/50 rounded-xl p-6 border border-slate-800 mb-8 w-fit min-w-[300px]">
               <div className="flex items-baseline gap-3 mb-2">
                 <span className="text-3xl font-light text-slate-400">₹</span>
-                <span className="text-5xl font-bold text-white tracking-tight">{product.price}</span>
+                <span className="text-5xl font-bold text-white tracking-tight">{product.expectedPrice}</span>
               </div>
               
               {product.originalPrice && (
                 <div className="flex items-center gap-3">
                   <span className="text-slate-500 line-through text-lg">₹{product.originalPrice}</span>
-                  {product.discount && (
-                    <span className="text-emerald-400 font-medium text-sm bg-emerald-400/10 px-2 py-0.5 rounded">
-                      {product.discount} OFF
-                    </span>
-                  )}
+                  <span className="text-emerald-400 font-medium text-sm bg-emerald-400/10 px-2 py-0.5 rounded">
+                    {Math.round((1 - product.expectedPrice / product.originalPrice) * 100)}% OFF
+                  </span>
                 </div>
               )}
               <p className="text-xs text-slate-400 mt-3 pt-3 border-t border-slate-800">Includes all applicable taxes</p>
@@ -93,12 +79,24 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
             <div className="grid grid-cols-2 gap-4 mb-8">
               <div className="bg-slate-900 rounded-lg p-4 border border-slate-800">
                 <p className="text-xs text-slate-500 mb-1 uppercase tracking-wider font-semibold">Condition</p>
-                <p className="font-medium text-slate-200">{product.condition}</p>
+                <p className="font-medium text-slate-200 uppercase">{product.condition}</p>
               </div>
               <div className="bg-slate-900 rounded-lg p-4 border border-slate-800">
-                <p className="text-xs text-slate-500 mb-1 uppercase tracking-wider font-semibold">Seller</p>
-                <p className="font-medium text-amber-500">{product.seller}</p>
+                <p className="text-xs text-slate-500 mb-1 uppercase tracking-wider font-semibold">Seller Domain</p>
+                <p className="font-medium text-amber-500">{product.sellerDomain}</p>
               </div>
+            </div>
+
+            {/* Fair Price Checker Integration */}
+            <div className="mb-8">
+              <FairPriceChecker
+                title={product.title}
+                category={product.category}
+                condition={product.condition}
+                price={product.expectedPrice}
+                excludeId={id}
+                mode="buyer"
+              />
             </div>
 
             <div className="mb-8">

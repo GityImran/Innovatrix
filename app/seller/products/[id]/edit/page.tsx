@@ -16,6 +16,7 @@ import React, {
 } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { uploadImage } from "@/lib/upload";
+import { FairPriceChecker } from "@/app/components/FairPriceChecker/FairPriceChecker";
 // import {
 //   getProductById,
 //   updateProduct,
@@ -383,6 +384,16 @@ export default function EditProductPage() {
               {errors.expectedPrice && <p style={s.errMsg}>{errors.expectedPrice}</p>}
             </div>
           </div>
+
+          {/* Fair Price Checker */}
+          <FairPriceChecker
+            title={title}
+            category={category}
+            condition={condition}
+            price={Number(expectedPrice)}
+            excludeId={id}
+            mode="seller"
+          />
         </div>
 
         {/* ── Images ── */}
