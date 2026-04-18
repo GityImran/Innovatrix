@@ -57,10 +57,10 @@ export default async function Header() {
               <UnreadBadge />
             </Link>
           )}
-          <div className={styles.actionItem}>
+          <Link href="/orders" className={styles.actionItem}>
             <span className={styles.actionLabel}>Returns</span>
             <span className={styles.actionBold}>& Orders</span>
-          </div>
+          </Link>
           <Link href="/cart" className={`${styles.actionItem} ${styles.cart}`}>
             <span className={styles.cartIcon}>🛒</span>
             <CartCount />

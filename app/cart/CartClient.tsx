@@ -270,10 +270,10 @@ function CartContent({ initialSuperCoins = 0 }: { initialSuperCoins?: number }) 
           )}
 
           <div style={{ display: "flex", gap: "12px", justifyContent: "center", animation: "fadeUp 0.4s 0.5s both" }}>
-            <button onClick={() => router.push("/dashboard")} style={{ padding: "14px 28px", borderRadius: "14px", background: "linear-gradient(135deg,#f59e0b,#d97706)", color: "#000", fontWeight: 800, fontSize: "14px", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", boxShadow: "0 4px 20px rgba(245,158,11,0.3)" }}>
+            <button onClick={() => router.push("/orders")} style={{ padding: "14px 28px", borderRadius: "14px", background: "linear-gradient(135deg,#f59e0b,#d97706)", color: "#000", fontWeight: 800, fontSize: "14px", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", boxShadow: "0 4px 20px rgba(245,158,11,0.3)" }}>
               View Orders <ArrowRight size={16} />
             </button>
-            <button onClick={() => router.push("/search")} style={{ padding: "14px 24px", borderRadius: "14px", background: "rgba(255,255,255,0.04)", color: "#64748b", fontWeight: 600, fontSize: "14px", border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer" }}>
+            <button onClick={() => router.push("/")} style={{ padding: "14px 24px", borderRadius: "14px", background: "rgba(255,255,255,0.04)", color: "#64748b", fontWeight: 600, fontSize: "14px", border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer" }}>
               Keep Shopping
             </button>
           </div>
