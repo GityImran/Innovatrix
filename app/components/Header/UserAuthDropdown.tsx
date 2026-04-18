@@ -77,23 +77,23 @@ export default function UserAuthDropdown({ session }: UserAuthDropdownProps) {
         <div className={styles.dropdownMenu} onClick={() => setIsOpen(false)}>
           {session ? (
             <>
-              <button onClick={handleSellItemClick} className={styles.dropdownItem} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 'inherit', font: 'inherit' }}>
+              <button onClick={handleSellItemClick} className={styles.dropdownItem} style={{ width: '100%', textAlign: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 'inherit', font: 'inherit' }}>
                 Sell Item
               </button>
               <button 
                 onClick={() => signOut({ callbackUrl: "/" })} 
                 className={styles.dropdownItem}
-                style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 'inherit', font: 'inherit' }}
+                style={{ width: '100%', textAlign: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 'inherit', font: 'inherit' }}
               >
                 Logout
               </button>
             </>
           ) : (
             <>
-              <Link href="/login" className={styles.dropdownItem}>
+              <Link href="/login" className={styles.dropdownItem} style={{ textAlign: 'center' }}>
                 Login
               </Link>
-              <Link href="/register" className={styles.dropdownItem}>
+              <Link href="/register" className={styles.dropdownItem} style={{ textAlign: 'center' }}>
                 Sign Up
               </Link>
             </>

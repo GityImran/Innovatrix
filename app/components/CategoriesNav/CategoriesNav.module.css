@@ -36,3 +36,26 @@
 .highlight {
   font-weight: 700;
 }
+
+.actionNav {
+  height: auto;
+  min-height: 48px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05); /* or var(--card-border) */
+}
+
+.spreadList {
+  justify-content: space-evenly;
+  width: 100%;
+}
+
+.actionItem {
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius-sm);
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.actionItem:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}

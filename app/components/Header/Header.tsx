@@ -16,7 +16,6 @@ export default async function Header() {
         <div className={styles.logo}>
           <Link href="/">
             Campus<span className={styles.logoAccent}>Mart</span>
-            <span className={styles.logoSub}>.edu</span>
           </Link>
         </div>
 

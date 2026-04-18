@@ -8,13 +8,11 @@ export default function Hero() {
       <div className={`max-w-container ${styles.bannerWrapper}`}>
         <div className={styles.banner}>
           <div className={styles.bannerContent}>
-            <Link href="/sustainability" className={styles.tagLink}>
-              <span className={styles.tag}>Sustainability</span>
-            </Link>
-            <h1 className={styles.title}>Back to Campus Sale</h1>
-            <p className={styles.desc}>Save up to 80% on pre-owned textbooks, lab equipments, and electronics.</p>
-            <Link href="#shop" className={styles.shopBtn}>
-              Shop Now
+            <span className="text-yellow-400 font-semibold uppercase tracking-wider text-sm md:text-base mb-2 block">Campus Marketplace for Students</span>
+            <h1 className={styles.title}>Buy, Sell, Trade — Smarter</h1>
+            <p className={styles.desc}>Save money, reduce waste, and find everything you need from your own campus community.</p>
+            <Link href="#shop" className={`${styles.shopBtn} bg-yellow-500 hover:bg-yellow-400 text-black font-semibold shadow-md hover:shadow-yellow-400/30 transition-all duration-200`}>
+              Explore Marketplace
             </Link>
           </div>
           <div className={styles.gradientOverlay}></div>
