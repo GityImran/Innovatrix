@@ -15,6 +15,7 @@ export interface IUser extends Document {
   college: string;     // Must be from the approved list
   password: string;    // Stored as bcrypt hash — NEVER plain text
   isVerified: boolean; // Added for admin verification
+  superCoins: number;  // Coins earned from purchases
   createdAt: Date;
   updatedAt: Date;
 }
@@ -55,6 +56,10 @@ const UserSchema = new Schema<IUser>(
     isVerified: {
       type: Boolean,
       default: false,
+    },
+    superCoins: {
+      type: Number,
+      default: 0,
     },
   },
   {

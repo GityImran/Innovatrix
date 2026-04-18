@@ -21,6 +21,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import Order from "@/models/Order";
 import Product from "@/models/Product";
 import RentItem from "@/models/RentItem";
+import User from "@/models/User";
 import { auth } from "@/lib/auth";
 
 export async function PATCH(
@@ -74,6 +75,15 @@ export async function PATCH(
       await Product.findByIdAndUpdate(order.itemId, { status: "sold" });
     } else if (order.itemModel === "RentItem") {
       await RentItem.findByIdAndUpdate(order.itemId, { status: "rented" });
+    }
+
+    // Super coin logic: 5% of totalAmount, 1 coin = 0.01 Rs
+    // So coins = (totalAmount * 0.05) / 0.01 = totalAmount * 5
+    const coinsEarned = Math.floor(order.totalAmount * 5);
+    if (coinsEarned > 0) {
+      await User.findByIdAndUpdate(order.buyerId, {
+        $inc: { superCoins: coinsEarned },
+      });
     }
 
     return NextResponse.json({

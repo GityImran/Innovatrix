@@ -42,7 +42,7 @@ const globalStyles = `
   .pay-card:hover{border-color:rgba(245,158,11,0.4) !important;background:rgba(245,158,11,0.04) !important}
 `;
 
-function CartContent() {
+function CartContent({ initialSuperCoins = 0 }: { initialSuperCoins?: number }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -50,6 +50,7 @@ function CartContent() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(null);
   const [placedOrders, setPlacedOrders] = useState<any[]>([]);
   const [negotiatedOrder, setNegotiatedOrder] = useState<any>(null);
+  const [useSuperCoins, setUseSuperCoins] = useState(false);
   
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -117,7 +118,7 @@ function CartContent() {
       const res = await fetch(negotiatedOrder ? `/api/orders/${negotiatedOrder._id}/confirm` : "/api/cart/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentMethod: paymentMethod ?? "cod" }),
+        body: JSON.stringify({ paymentMethod: paymentMethod ?? "cod", useSuperCoins }),
       });
 
       if (res.ok) {
@@ -147,6 +148,10 @@ function CartContent() {
     }
     return acc + price;
   }, 0);
+
+  const maxDiscount = initialSuperCoins * 0.01;
+  const discount = useSuperCoins ? Math.min(maxDiscount, subtotal) : 0;
+  const finalTotal = subtotal - discount;
 
   /* ── Shared: Step Progress Bar ──────────────── */
   const stepIndex = { cart: 0, payment: 1, review: 2, success: 3 }[step];
@@ -363,7 +368,7 @@ function CartContent() {
           {/* Order total preview */}
           <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "16px", padding: "16px 20px", marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: "13px", color: "#475569" }}>Amount to pay</span>
-            <span style={{ fontSize: "1.5rem", fontWeight: 900, color: "#f59e0b", letterSpacing: "-0.02em" }}>₹{subtotal?.toLocaleString("en-IN")}</span>
+            <span style={{ fontSize: "1.5rem", fontWeight: 900, color: "#f59e0b", letterSpacing: "-0.02em" }}>₹{finalTotal?.toLocaleString("en-IN")}</span>
           </div>
 
           {/* CTA */}
@@ -490,6 +495,7 @@ function CartContent() {
             <div style={{ position: "absolute", top: "-20px", right: "-20px", width: "100px", height: "100px", background: "rgba(245,158,11,0.08)", borderRadius: "50%", filter: "blur(40px)", pointerEvents: "none" }} />
             {[
               { label: `Subtotal (${items.length} items)`, value: `₹${subtotal?.toLocaleString("en-IN")}`, color: "#94a3b8" },
+              ...(useSuperCoins && discount > 0 ? [{ label: `SuperCoins Discount (${initialSuperCoins} 🪙)`, value: `-₹${discount.toLocaleString("en-IN")}`, color: "#34d399" }] : []),
               { label: "Platform Fee", value: "FREE", color: "#34d399" },
               { label: "Delivery", value: "Arranged with seller", color: "#334155" },
             ].map(row => (
@@ -501,7 +507,7 @@ function CartContent() {
             <div style={{ height: "1px", background: "rgba(255,255,255,0.06)", margin: "16px 0" }} />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
               <span style={{ fontWeight: 700, color: "#64748b", fontSize: "14px" }}>Total</span>
-              <span style={{ fontSize: "2rem", fontWeight: 900, color: "#f59e0b", letterSpacing: "-0.03em" }}>₹{subtotal?.toLocaleString("en-IN")}</span>
+              <span style={{ fontSize: "2rem", fontWeight: 900, color: "#f59e0b", letterSpacing: "-0.03em" }}>₹{finalTotal?.toLocaleString("en-IN")}</span>
             </div>
           </div>
 
@@ -646,6 +652,7 @@ function CartContent() {
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "18px", position: "relative" }}>
                   {[
                     { label: `Items (${items.length})`, value: `₹${subtotal?.toLocaleString("en-IN")}`, color: "#94a3b8" },
+                    ...(useSuperCoins && discount > 0 ? [{ label: `SuperCoins Discount`, value: `-₹${discount.toLocaleString("en-IN")}`, color: "#34d399" }] : []),
                     { label: "Platform Fee", value: "FREE", color: "#34d399" },
                     { label: "Delivery", value: "TBD", color: "#1e293b" },
                   ].map(row => (
@@ -655,10 +662,25 @@ function CartContent() {
                     </div>
                   ))}
                 </div>
+
+                {initialSuperCoins > 0 && (
+                  <div style={{ marginBottom: "18px", padding: "12px", background: "rgba(245,158,11,0.1)", borderRadius: "12px", border: "1px solid rgba(245,158,11,0.2)" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
+                      <input 
+                        type="checkbox" 
+                        checked={useSuperCoins} 
+                        onChange={(e) => setUseSuperCoins(e.target.checked)}
+                        style={{ width: "16px", height: "16px", accentColor: "#f59e0b" }}
+                      />
+                      <span style={{ fontSize: "13px", color: "#e2e8f0" }}>Use {initialSuperCoins} SuperCoins (₹{(initialSuperCoins * 0.01).toFixed(2)})</span>
+                    </label>
+                  </div>
+                )}
+
                 <div style={{ height: "1px", background: "linear-gradient(90deg,rgba(255,255,255,0.07),transparent)", marginBottom: "18px", position: "relative" }} />
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "24px", position: "relative" }}>
                   <span style={{ fontSize: "13px", fontWeight: 700, color: "#64748b" }}>Total</span>
-                  <span style={{ fontSize: "2rem", fontWeight: 900, color: "#f59e0b", letterSpacing: "-0.03em" }}>₹{subtotal?.toLocaleString("en-IN")}</span>
+                  <span style={{ fontSize: "2rem", fontWeight: 900, color: "#f59e0b", letterSpacing: "-0.03em" }}>₹{finalTotal?.toLocaleString("en-IN")}</span>
                 </div>
 
                 <button
@@ -688,7 +710,7 @@ function CartContent() {
   );
 }
 
-export default function CartClient() {
+export default function CartClient({ initialSuperCoins = 0 }: { initialSuperCoins?: number }) {
   return (
     <Suspense fallback={
       <div style={{ minHeight: "100vh", backgroundColor: "#080808", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -700,7 +722,7 @@ export default function CartClient() {
         </div>
       </div>
     }>
-      <CartContent />
+      <CartContent initialSuperCoins={initialSuperCoins} />
     </Suspense>
   );
 }
