@@ -48,6 +48,28 @@ export function calculateStats(products: Product[]): SustainabilityStats {
   };
 }
 
+export interface CategoryImpact {
+  name: string;
+  co2Saved: number;
+}
+
+export function getCategoryImpact(products: Product[]): CategoryImpact[] {
+  const reusedItems = products.filter(p => p.status === "sold");
+  const impactMap: Record<string, number> = {};
+
+  reusedItems.forEach(item => {
+    const factor = CO2_FACTORS[item.title.toLowerCase()] || 
+                   CO2_FACTORS[item.category.toLowerCase()] || 2;
+    const category = item.category || "Other";
+    impactMap[category] = (impactMap[category] || 0) + factor;
+  });
+
+  return Object.entries(impactMap).map(([name, co2Saved]) => ({
+    name: name.charAt(0).toUpperCase() + name.slice(1),
+    co2Saved
+  })).sort((a, b) => b.co2Saved - a.co2Saved);
+}
+
 export function getSuggestions(products: Product[]) {
   const suggestions = [];
   const now = new Date();
