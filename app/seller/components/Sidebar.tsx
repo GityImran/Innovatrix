@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: "/seller/add-product", label: "Add Product", icon: "➕" },
   { href: "/seller/rent", label: "Rent Item", icon: "🔄" },
   { href: "/seller/products", label: "Listed Products", icon: "📦" },
+  { href: "/seller/auctions", label: "Auctions", icon: "⚖️" },
   { href: "/seller/orders", label: "Orders", icon: "🛒" },
   { href: "/seller/earnings", label: "Earnings", icon: "💰" },
   { href: "/seller/settings", label: "Settings", icon: "⚙️" },

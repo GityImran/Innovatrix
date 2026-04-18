@@ -17,77 +17,100 @@ interface AuctionCardProps {
 }
 
 export default function AuctionCard({ auction }: AuctionCardProps) {
-  const isEndingSoon = new Date(auction.endTime).getTime() - Date.now() < 3600000; // < 1 hour
+  const isEndingSoon = new Date(auction.endTime).getTime() - Date.now() < 3600000;
 
   return (
-    <div className="group relative bg-[#0a0a0a] border border-white/5 rounded-3xl overflow-hidden hover:border-yellow-500/30 hover:-translate-y-1 transition-all duration-300 hover:shadow-[0_0_40px_-10px_rgba(234,179,8,0.15)] flex flex-col">
-      {/* Image Container */}
-      <div className="relative aspect-[4/3] bg-zinc-900 overflow-hidden">
+    <div 
+      style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        backgroundColor: '#0a0a0a', 
+        border: '1px solid rgba(255,255,255,0.1)', 
+        borderRadius: '24px', 
+        overflow: 'hidden', 
+        transition: 'transform 0.3s, box-shadow 0.3s',
+        cursor: 'pointer',
+        height: '100%'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = 'translateY(-4px)';
+        e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,0.6)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'none';
+        e.currentTarget.style.boxShadow = 'none';
+      }}
+    >
+      
+      {/* Image Section */}
+      <div style={{ position: 'relative', paddingTop: '75%', backgroundColor: '#111', borderBottom: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden' }}>
         {auction.images && auction.images[0] ? (
           <img
             src={auction.images[0]}
             alt={auction.productTitle}
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
           />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center text-zinc-600 bg-zinc-900 border-b border-white/5">
-            <span className="text-4xl mb-2">📦</span>
-            <span className="text-xs uppercase font-bold tracking-widest text-zinc-700">No Image</span>
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#64748b', backgroundColor: '#0a0a0a' }}>
+            <span style={{ fontSize: '48px', marginBottom: '8px', opacity: 0.5 }}>📦</span>
+            <span style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.1em' }}>No Image</span>
           </div>
         )}
         
         {/* Top Badges */}
-        <div className="absolute top-3 left-3 flex gap-2 z-10">
-          <span className="bg-black/50 backdrop-blur-md text-white text-[10px] px-3 py-1.5 rounded-full uppercase font-bold tracking-widest border border-white/10 shadow-xl">
+        <div style={{ position: 'absolute', top: '16px', left: '16px', display: 'flex', gap: '8px', zIndex: 10 }}>
+          <span style={{ backgroundColor: 'rgba(0,0,0,0.8)', color: '#fff', fontSize: '10px', padding: '4px 10px', borderRadius: '6px', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em', border: '1px solid rgba(255,255,255,0.1)' }}>
             {auction.condition}
           </span>
           {isEndingSoon && (
-            <span className="bg-red-500/80 backdrop-blur-md text-white text-[10px] px-3 py-1.5 rounded-full uppercase font-black tracking-widest animate-pulse border border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.4)]">
-              ⏳ Ending Soon
+            <span style={{ backgroundColor: 'rgba(239, 68, 68, 0.9)', color: '#fff', fontSize: '10px', padding: '4px 10px', borderRadius: '6px', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em', border: '1px solid rgba(239, 68, 68, 0.5)', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)' }}>
+              Ending Soon
             </span>
           )}
         </div>
 
-        {/* Timer Badge (Bottom Left) */}
-        <div className="absolute bottom-3 left-3 z-10 transition-transform duration-300 group-hover:-translate-y-1">
-          <div className="bg-black/70 backdrop-blur-xl px-3 py-1.5 rounded-xl border border-white/10 flex items-center gap-2 shadow-2xl">
-            <span className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">Ends in</span>
-            <CountdownTimer endTime={auction.endTime} />
+        {/* Timer Badge */}
+        <div style={{ position: 'absolute', bottom: '16px', left: '16px', zIndex: 10 }}>
+          <div style={{ backgroundColor: 'rgba(0,0,0,0.9)', padding: '6px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.5)' }}>
+            <span style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 800, color: '#94a3b8' }}>Ends In</span>
+            <div style={{ color: '#fff', fontSize: '12px', fontFamily: 'monospace', fontWeight: 700 }}>
+              <CountdownTimer endTime={auction.endTime} />
+            </div>
           </div>
         </div>
-
-        {/* Gradient Overlay for legibility */}
-        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#0a0a0a] to-transparent pointer-events-none" />
       </div>
 
-      {/* Content Container */}
-      <div className="p-5 flex flex-col flex-grow relative z-20 bg-[#0a0a0a]">
-        <span className="text-zinc-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-2 block">
-          {auction.category}
-        </span>
+      {/* Content Section */}
+      <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', flexGrow: 1, backgroundColor: '#0a0a0a' }}>
+        <div style={{ marginBottom: '12px' }}>
+          <span style={{ color: '#fbbf24', fontSize: '10px', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '4px 8px', borderRadius: '4px', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+            {auction.category}
+          </span>
+        </div>
         
-        <h3 className="text-lg font-bold text-white mb-6 line-clamp-2 leading-tight group-hover:text-yellow-400 transition-colors duration-300">
+        <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#f1f5f9', margin: '0 0 20px 0', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
           {auction.productTitle}
         </h3>
         
-        <div className="mt-auto pt-4 border-t border-white/5 flex items-end justify-between">
-          <div className="flex flex-col">
-            <span className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest mb-1">
-              Highest Bid
+        {/* Bottom Actions Row */}
+        <div style={{ marginTop: 'auto', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span style={{ color: '#64748b', fontSize: '10px', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>
+              Current Bid
             </span>
-            <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600">
-              ₹{auction.currentBid}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+              <span style={{ color: '#94a3b8', fontSize: '14px', fontWeight: 700 }}>₹</span>
+              <span style={{ fontSize: '24px', fontWeight: 900, color: '#fff' }}>
+                {auction.currentBid}
+              </span>
+            </div>
           </div>
           
           <Link
             href={`/auction/${auction._id}`}
-            className="group/btn relative overflow-hidden bg-white/5 hover:bg-yellow-500 text-white hover:text-black text-xs font-black uppercase tracking-widest px-5 py-3 rounded-xl transition-all duration-300 border border-white/10 hover:border-yellow-400 shadow-lg"
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#f59e0b', color: '#000', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', padding: '12px 20px', borderRadius: '12px', textDecoration: 'none', boxShadow: '0 4px 12px rgba(245, 158, 11, 0.2)' }}
           >
-            <span className="relative z-10 flex items-center gap-2">
-              Bid Now
-              <span className="transition-transform duration-300 group-hover/btn:translate-x-1">→</span>
-            </span>
+            Bid Now <span style={{ fontSize: '12px' }}>→</span>
           </Link>
         </div>
       </div>

@@ -28,65 +28,51 @@ export default async function AuctionsPage() {
   const auctions = await getAuctions();
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white selection:bg-yellow-500/30 selection:text-yellow-200">
+    <>
       <Header />
       <CategoriesNav />
-
-      {/* Decorative background glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-yellow-500/10 blur-[120px] rounded-full pointer-events-none opacity-50 mix-blend-screen -z-10" />
-
-      <main className="container mx-auto px-4 py-16 relative z-10">
-        <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-16 border-b border-white/5 pb-8">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-bold uppercase tracking-widest text-zinc-400 mb-6">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]"></span>
-              Live Marketplace
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#080808', color: '#e2e8f0' }}>
+        <main style={{ flex: 1, maxWidth: '1200px', margin: '0 auto', padding: '32px 24px', width: '100%' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px', flexWrap: 'wrap', gap: '16px' }}>
+            <div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '4px 12px', borderRadius: '999px', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', marginBottom: '16px' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981', boxShadow: '0 0 8px rgba(16,185,129,0.5)' }}></span>
+                Live Marketplace
+              </div>
+              
+              <h1 style={{ fontSize: 'clamp(2rem, 4vw, 2.75rem)', fontWeight: 900, lineHeight: 1.15, letterSpacing: '-0.02em', margin: '0 0 12px 0', color: '#f8fafc' }}>
+                Discover <span style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Premium Deals</span>
+              </h1>
+              <p style={{ margin: 0, fontSize: '16px', color: '#64748b', maxWidth: '600px', lineHeight: 1.6 }}>
+                Bid on pre-owned textbooks, electronics, and rare finds. Dominate the CampusMart auction floor.
+              </p>
             </div>
             
-            <h1 className="text-5xl md:text-7xl font-black mb-6 tracking-tighter">
-              Discover <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-yellow-200 to-yellow-500">
-                Premium Deals.
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', padding: '16px 24px', borderRadius: '16px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>
+                Active Listings
               </span>
-            </h1>
-            <p className="text-lg text-zinc-400 leading-relaxed max-w-xl">
-              Bid on pre-owned textbooks, electronics, and rare finds. Dominate the CampusMart auction floor.
-            </p>
-          </div>
-          
-          <div className="flex flex-col items-end gap-2 bg-white/5 p-6 rounded-3xl border border-white/10 backdrop-blur-sm relative overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <span className="text-sm font-bold uppercase tracking-widest text-zinc-500 relative z-10">
-              Active Listings
-            </span>
-            <span className="text-5xl font-black text-white relative z-10 tracking-tighter">
-              {auctions.length.toString().padStart(2, '0')}
-            </span>
-          </div>
-        </div>
-
-        {auctions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-32 bg-white/[0.02] rounded-[3rem] border border-white/5 relative overflow-hidden">
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5" />
-            <div className="text-7xl mb-8 relative">
-              <div className="absolute inset-0 blur-2xl bg-yellow-400/20 rounded-full scale-150" />
-              <span className="relative z-10">🏷️</span>
+              <span style={{ fontSize: '2.5rem', fontWeight: 900, color: '#f8fafc', lineHeight: 1 }}>
+                {auctions.length.toString().padStart(2, '0')}
+              </span>
             </div>
-            <h2 className="text-3xl font-black mb-4 tracking-tight">The Floor is Quiet</h2>
-            <p className="text-zinc-500 text-lg max-w-md text-center mb-8">
-              There are no active auctions right now. Check back later or start your own!
-            </p>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {auctions.map((auction: any, idx: number) => (
-              <div key={auction._id} style={{ animationFillMode: 'both', animationDelay: `${idx * 100}ms` }} className="animate-fade-in-up">
-                <AuctionCard auction={auction} />
-              </div>
-            ))}
-          </div>
-        )}
-      </main>
-    </div>
+
+          {auctions.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '80px 20px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <span style={{ fontSize: '4rem', display: 'block', marginBottom: '20px', opacity: 0.5 }}>🏷️</span>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: '0 0 8px 0', color: '#f1f5f9' }}>The Floor is Quiet</h2>
+              <p style={{ margin: 0, color: '#64748b' }}>There are no active auctions right now. Check back later or start your own!</p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
+              {auctions.map((auction: any) => (
+                <AuctionCard key={auction._id} auction={auction} />
+              ))}
+            </div>
+          )}
+        </main>
+      </div>
+    </>
   );
 }

@@ -117,30 +117,24 @@ export default function AuctionDetailClient({
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 lg:gap-12 relative">
-      {/* Decorative background glow for the detail page */}
-      <div className="absolute top-20 right-0 w-[600px] h-[600px] bg-yellow-500/10 blur-[150px] rounded-full pointer-events-none opacity-40 mix-blend-screen -z-10" />
 
       {/* Left: Images & Info */}
       <div className="xl:col-span-7 space-y-8">
         {/* Main Image Stage */}
-        <div className="relative pt-[75%] bg-[#0a0a0a] border border-white/5 rounded-[2.5rem] overflow-hidden group shadow-2xl shadow-black">
+        <div style={{ position: 'relative', paddingTop: '75%', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '24px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {auction.images && auction.images[activeImage] ? (
             <img
               src={auction.images[activeImage]}
               alt={auction.productTitle}
-              className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
             />
           ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-zinc-600 bg-[#0a0a0a]">
-              <span className="text-6xl mb-4 opacity-50">📦</span>
-              <span className="text-sm font-bold uppercase tracking-widest text-zinc-700">No Image</span>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+              <span style={{ fontSize: '4rem', marginBottom: '16px', opacity: 0.5 }}>📦</span>
+              <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>No Image</span>
             </div>
           )}
           
-          {/* Gradients */}
-          <div className="absolute inset-0 border-[4px] border-white/5 rounded-[2.5rem] pointer-events-none" />
-          <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
-
           {/* Overlays */}
           {isEnded && (
             <div className="absolute inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-20">
@@ -164,31 +158,30 @@ export default function AuctionDetailClient({
         
         {/* Thumbnails */}
         {auction.images && auction.images.length > 1 && (
-          <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
+          <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '16px' }} className="custom-scrollbar">
             {auction.images.map((img: string, idx: number) => (
               <button
                 key={idx}
                 onClick={() => setActiveImage(idx)}
-                className={`relative flex-shrink-0 w-32 h-24 rounded-2xl overflow-hidden transition-all duration-300 ${
-                  activeImage === idx 
-                    ? "ring-2 ring-yellow-500 scale-[1.02] shadow-[0_0_20px_rgba(234,179,8,0.2)]" 
-                    : "border border-white/5 opacity-50 hover:opacity-100 hover:scale-[1.02]"
-                }`}
+                style={{ 
+                  position: 'relative', flexShrink: 0, width: '120px', height: '90px', borderRadius: '16px', overflow: 'hidden', 
+                  border: activeImage === idx ? '2px solid #f59e0b' : '1px solid rgba(255,255,255,0.05)',
+                  opacity: activeImage === idx ? 1 : 0.6,
+                  transition: 'opacity 0.2s, transform 0.2s'
+                }}
               >
-                <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
-                <img src={img} alt="" className="w-full h-full object-cover" />
+                <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </button>
             ))}
           </div>
         )}
 
         {/* Description Section */}
-        <div className="bg-[#0a0a0a]/80 backdrop-blur-sm border border-white/5 rounded-3xl p-8 lg:p-10">
-          <div className="flex items-center gap-3 mb-6">
-            <span className="w-1 h-6 bg-yellow-500 rounded-full" />
-            <h2 className="text-2xl font-bold">About this item</h2>
-          </div>
-          <p className="text-zinc-400 leading-relaxed whitespace-pre-wrap text-lg">
+        <div style={{ backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '24px', padding: '32px' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '24px', color: '#f1f5f9', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '1.2rem' }}>📝</span> About this item
+          </h2>
+          <p style={{ margin: 0, color: '#94a3b8', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
             {auction.description || "No description provided."}
           </p>
         </div>
@@ -196,42 +189,42 @@ export default function AuctionDetailClient({
 
       {/* Right: Bidding Dashboard */}
       <div className="xl:col-span-5">
-        <div className="bg-white/[0.02] backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-8 lg:p-10 sticky top-24 shadow-2xl">
+        <div style={{ backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '24px', padding: '32px', position: 'sticky', top: '24px' }}>
           {/* Header Info */}
-          <div className="mb-10">
-            <div className="flex flex-wrap items-center gap-3 mb-4">
-              <span className="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 text-xs font-black uppercase tracking-[0.2em] px-3 py-1.5 rounded-full">
+          <div style={{ marginBottom: '32px' }}>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#fbbf24', backgroundColor: 'rgba(245,158,11,0.1)', padding: '4px 10px', borderRadius: '999px', border: '1px solid rgba(245,158,11,0.2)' }}>
                 {auction.category}
               </span>
-              <span className="bg-white/5 text-zinc-300 border border-white/10 text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-full">
+              <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', backgroundColor: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.1)' }}>
                 {auction.condition}
               </span>
             </div>
-            <h1 className="text-4xl lg:text-5xl font-black tracking-tight leading-tight mb-2">
+            <h1 style={{ fontSize: 'clamp(2rem, 3vw, 2.5rem)', fontWeight: 900, lineHeight: 1.15, letterSpacing: '-0.02em', margin: '0 0 8px 0', background: 'linear-gradient(135deg, #fff 60%, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
               {auction.productTitle}
             </h1>
-            <p className="text-zinc-500 text-sm font-bold tracking-widest uppercase">
-              Sold by: <span className="text-zinc-300">{auction.sellerId?.name}</span>
+            <p style={{ margin: 0, fontSize: '14px', color: '#64748b', fontWeight: 600 }}>
+              Sold by: <span style={{ color: '#e2e8f0' }}>{auction.sellerId?.name}</span>
             </p>
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 gap-4 mb-10">
-            <div className="bg-[#0a0a0a] p-5 rounded-3xl border border-white/5">
-              <p className="text-zinc-500 text-xs uppercase font-bold tracking-widest mb-2">Current Bid</p>
-              <div className="flex items-baseline gap-1">
-                <span className="text-lg text-zinc-400 font-bold">₹</span>
-                <p className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600">
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '16px', marginBottom: '32px' }}>
+            <div style={{ backgroundColor: 'rgba(15,15,15,0.5)', padding: '20px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <p style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', margin: '0 0 8px 0' }}>Current Bid</p>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                <span style={{ fontSize: '18px', color: '#64748b', fontWeight: 800 }}>₹</span>
+                <span style={{ fontSize: '32px', fontWeight: 900, background: 'linear-gradient(135deg, #f59e0b, #d97706)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                   {auction.currentBid}
-                </p>
+                </span>
               </div>
             </div>
-            <div className="bg-[#0a0a0a] p-5 rounded-3xl border border-white/5">
-              <p className="text-zinc-500 text-xs uppercase font-bold tracking-widest mb-2 flex items-center gap-2">
+            <div style={{ backgroundColor: 'rgba(15,15,15,0.5)', padding: '20px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <p style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {isEnded ? "Time Ended" : "Time Left"} 
-                {!isEnded && <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />}
+                {!isEnded && <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ef4444', animation: 'pulse 2s infinite' }} />}
               </p>
-              <div className="text-2xl pt-1">
+              <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>
                 <CountdownTimer endTime={auction.endTime} onEnd={fetchUpdatedData} compact={false} />
               </div>
             </div>
@@ -239,36 +232,33 @@ export default function AuctionDetailClient({
 
           {/* Bidding Actions */}
           {!isEnded ? (
-            <form onSubmit={handlePlaceBid} className="space-y-6">
+            <form onSubmit={handlePlaceBid} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               {error && (
-                <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-4 rounded-2xl font-bold flex items-center gap-3">
-                  <span>⚠️</span> {error}
+                <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#f87171', padding: '16px', borderRadius: '12px', fontSize: '14px', fontWeight: 600 }}>
+                  ⚠️ {error}
                 </div>
               )}
               
-              <div className="space-y-3">
-                <div className="relative group">
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-2xl blur opacity-0 group-hover:opacity-20 transition duration-500"></div>
-                  <div className="relative flex items-center bg-[#0a0a0a] border border-white/10 rounded-2xl overflow-hidden focus-within:border-yellow-500/50 transition-colors">
-                    <span className="pl-6 text-zinc-500 font-bold text-xl">₹</span>
-                    <input
-                      type="number"
-                      value={bidAmount}
-                      onChange={(e) => setBidAmount(Number(e.target.value))}
-                      min={minBid}
-                      className="w-full bg-transparent py-5 px-4 text-2xl font-black text-white focus:outline-none"
-                      disabled={submitting || isSeller}
-                    />
-                  </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '0 20px', transition: 'border-color 0.2s' }}>
+                  <span style={{ fontSize: '20px', color: '#94a3b8', fontWeight: 800 }}>₹</span>
+                  <input
+                    type="number"
+                    value={bidAmount}
+                    onChange={(e) => setBidAmount(Number(e.target.value))}
+                    min={minBid}
+                    style={{ width: '100%', backgroundColor: 'transparent', border: 'none', padding: '20px 16px', fontSize: '24px', fontWeight: 900, color: '#f8fafc', outline: 'none' }}
+                    disabled={submitting || isSeller}
+                  />
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
                   {[minBid, Math.ceil(auction.currentBid * 1.1), Math.ceil(auction.currentBid * 1.2)].map((val) => (
                     <button
                       key={val}
                       type="button"
                       onClick={() => setBidAmount(val)}
-                      className="bg-white/5 hover:bg-white/10 text-zinc-300 py-3 rounded-xl text-sm font-bold transition-all border border-white/5 hover:border-white/20"
+                      style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#e2e8f0', padding: '12px', borderRadius: '12px', fontSize: '14px', fontWeight: 700, border: '1px solid rgba(255,255,255,0.1)', transition: 'background-color 0.2s', cursor: 'pointer' }}
                     >
                       + ₹{val - auction.currentBid}
                     </button>
@@ -279,34 +269,31 @@ export default function AuctionDetailClient({
               <button
                 type="submit"
                 disabled={submitting || isSeller}
-                className={`w-full py-5 rounded-2xl font-black text-lg transition-all duration-300 relative overflow-hidden group ${
-                  isSeller 
-                  ? "bg-white/5 text-zinc-600 cursor-not-allowed" 
-                  : "bg-yellow-500 text-black hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_30px_rgba(234,179,8,0.3)]"
-                }`}
+                style={{ 
+                  width: '100%', padding: '20px', borderRadius: '16px', fontWeight: 900, fontSize: '16px', border: 'none', cursor: (submitting || isSeller) ? 'not-allowed' : 'pointer',
+                  backgroundColor: isSeller ? 'rgba(255,255,255,0.05)' : '#f59e0b',
+                  color: isSeller ? '#64748b' : '#000',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  boxShadow: isSeller ? 'none' : '0 8px 24px rgba(245,158,11,0.25)'
+                }}
               >
-                {!isSeller && (
-                  <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-                )}
-                <span className="relative z-10">
-                  {submitting ? "Placing Bid..." : isSeller ? "Your Listing" : "Place Bid Now"}
-                </span>
+                {submitting ? "Placing Bid..." : isSeller ? "Your Listing" : "Place Bid Now"}
               </button>
             </form>
           ) : (
-            <div className="bg-[#0a0a0a] border border-white/5 p-8 rounded-3xl text-center shadow-inner">
-              <p className="text-zinc-500 font-bold mb-2 uppercase text-xs tracking-[0.2em]">Highest Bidder</p>
-              <p className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 mb-2">
+            <div style={{ backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '32px', borderRadius: '24px', textAlign: 'center' }}>
+              <p style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', margin: '0 0 8px 0' }}>Highest Bidder</p>
+              <p style={{ fontSize: '32px', fontWeight: 900, background: 'linear-gradient(135deg, #f59e0b, #d97706)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 }}>
                 {auction.highestBidderId?.name || "No Bids"}
               </p>
               
               {isHighestBidder && (
-                <div className="mt-8 pt-8 border-t border-white/5">
-                  <p className="text-green-400 font-bold mb-4">🎉 You won this auction!</p>
+                <div style={{ marginTop: '32px', paddingTop: '32px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                  <p style={{ color: '#10b981', fontWeight: 800, marginBottom: '16px' }}>🎉 You won this auction!</p>
                   <button 
-                    className="w-full bg-green-500 hover:bg-green-400 text-black py-4 rounded-2xl font-black text-lg shadow-[0_0_20px_rgba(34,197,94,0.3)] transition-all hover:scale-[1.02] active:scale-[0.98]"
                     onClick={handleAcceptOffer}
                     disabled={submitting}
+                    style={{ width: '100%', backgroundColor: '#10b981', color: '#000', padding: '16px', borderRadius: '16px', fontWeight: 900, fontSize: '16px', border: 'none', cursor: 'pointer', boxShadow: '0 8px 24px rgba(16,185,129,0.25)' }}
                   >
                     {submitting ? "Processing..." : "Claim & Checkout"}
                   </button>
@@ -316,40 +303,42 @@ export default function AuctionDetailClient({
           )}
 
           {/* Bid History (Stylized Timeline) */}
-          <div className="mt-12">
-            <h3 className="text-xs font-black uppercase tracking-widest text-zinc-500 mb-6 flex items-center gap-3">
+          <div style={{ marginTop: '48px' }}>
+            <h3 style={{ fontSize: '12px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
               Bid History
-              <span className="flex-1 h-px bg-white/5" />
-              <span className="bg-white/10 px-2 py-1 rounded text-zinc-300">{bids.length}</span>
+              <span style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255,255,255,0.05)' }} />
+              <span style={{ backgroundColor: 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '4px', color: '#e2e8f0' }}>{bids.length}</span>
             </h3>
             
-            <div className="space-y-1 max-h-[250px] overflow-y-auto custom-scrollbar pr-4 relative">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '250px', overflowY: 'auto', paddingRight: '16px' }} className="custom-scrollbar">
               {bids.length === 0 ? (
-                <div className="text-center py-8 border border-dashed border-white/10 rounded-2xl">
-                  <p className="text-zinc-600 text-sm font-bold">Be the first to bid!</p>
+                <div style={{ textAlign: 'center', padding: '32px 0', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '16px' }}>
+                  <p style={{ margin: 0, color: '#64748b', fontSize: '14px', fontWeight: 600 }}>Be the first to bid!</p>
                 </div>
               ) : (
                 bids.map((bid, idx) => (
-                  <div key={bid._id} className="group relative flex items-center gap-4 py-3 px-4 rounded-2xl hover:bg-white/5 transition-colors">
+                  <div key={bid._id} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '12px 16px', borderRadius: '16px', backgroundColor: 'rgba(255,255,255,0.02)', transition: 'background-color 0.2s' }}>
                     {/* Rank indicator */}
-                    <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-black text-xs border ${
-                      idx === 0 
-                        ? "bg-yellow-500/20 border-yellow-500/50 text-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.2)]" 
-                        : "bg-transparent border-white/10 text-zinc-600"
-                    }`}>
+                    <div style={{ 
+                      flexShrink: 0, width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '12px',
+                      backgroundColor: idx === 0 ? 'rgba(245,158,11,0.1)' : 'transparent',
+                      border: idx === 0 ? '1px solid rgba(245,158,11,0.5)' : '1px solid rgba(255,255,255,0.1)',
+                      color: idx === 0 ? '#f59e0b' : '#64748b',
+                      boxShadow: idx === 0 ? '0 0 10px rgba(245,158,11,0.2)' : 'none'
+                    }}>
                       #{idx + 1}
                     </div>
                     
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-bold truncate ${idx === 0 ? "text-white" : "text-zinc-400"}`}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: idx === 0 ? '#f8fafc' : '#94a3b8' }}>
                         {bid.userId?.name}
                       </p>
-                      <p className="text-xs text-zinc-600 font-mono">
+                      <p style={{ margin: 0, fontSize: '12px', color: '#64748b', fontFamily: 'monospace' }}>
                         {formatDistanceToNow(new Date(bid.createdAt))} ago
                       </p>
                     </div>
                     
-                    <p className={`text-right font-black tracking-tight ${idx === 0 ? "text-xl text-yellow-500" : "text-base text-zinc-500"}`}>
+                    <p style={{ margin: 0, textAlign: 'right', fontWeight: 900, fontSize: idx === 0 ? '20px' : '16px', color: idx === 0 ? '#f59e0b' : '#64748b' }}>
                       ₹{bid.amount}
                     </p>
                   </div>

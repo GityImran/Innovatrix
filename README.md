@@ -53,7 +53,7 @@ CampusMart solves a real problem: students at the end of every semester are left
 
 **What makes it different:**
 - 🔒 **College-scoped feeds** — you only see items sold by students at your own college
-- 🤖 **AI verification** — Gemini 1.5 Flash automatically checks if a product's photo matches the seller's claimed condition
+- 🤖 **AI verification** — Gemini 2.5 Flash automatically checks if a product's photo matches the seller's claimed condition
 - 💬 **Real-time messaging** — Socket.IO-powered chat between buyer and seller, directly on the platform
 - 💳 **Integrated payments** — Razorpay for QR/UPI-on-delivery flow
 - 📦 **Rental support** — items can be listed for day/week/month rental, not just sale
@@ -95,7 +95,7 @@ CampusMart solves a real problem: students at the end of every semester are left
 |---|---|
 | **Cloudinary** | Image upload, storage, and transformation (product photos, ID cards) |
 | **Razorpay** | Payment Links, UPI QR code generation, webhook-based confirmation |
-| **Google Gemini 1.5 Flash** | AI product condition detection from uploaded images |
+| **Google Gemini 2.5 Flash** | AI product condition detection from uploaded images |
 
 ---
 
@@ -325,7 +325,7 @@ Accessible at `/dashboard/admin` (restricted to admin accounts):
 **How it works:**
 
 1. When a seller uploads a product image, the frontend calls `POST /api/ai/condition` with the image URL and the seller's claimed condition
-2. The API uses **@google/generative-ai** to call **Gemini 1.5 Flash** with the image
+2. The API uses **@google/generative-ai** to call **Gemini 2.5 Flash** with the image
 3. Gemini returns its assessment of the item's condition (e.g., "good", "used", "new-like")
 4. The API compares the AI-detected condition with the seller's claimed condition
 5. If there's a mismatch, `mismatch: true` is stored; if Gemini fails, `aiFailed: true` is stored

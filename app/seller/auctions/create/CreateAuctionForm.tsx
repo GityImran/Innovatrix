@@ -93,212 +93,415 @@ export default function CreateAuctionForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-8">
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-5 rounded-2xl text-sm font-bold flex items-center gap-3 shadow-[0_0_20px_rgba(239,68,68,0.1)]">
-          <span className="text-xl">⚠️</span> {error}
-        </div>
-      )}
-
-      {/* Basic Info */}
-      <div className="bg-[#0a0a0a] border border-white/5 shadow-2xl rounded-[2.5rem] p-8 lg:p-12 relative overflow-hidden group">
-        <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
-        
-        <h2 className="text-2xl font-black flex items-center gap-4 mb-10 relative z-10">
-          <div className="relative flex items-center justify-center w-10 h-10">
-            <span className="absolute inset-0 bg-yellow-500/20 rounded-full blur-md" />
-            <span className="relative bg-yellow-500/10 text-yellow-500 border border-yellow-500/30 w-full h-full rounded-full flex items-center justify-center text-sm font-black shadow-inner">1</span>
+    <div style={s.page}>
+      <form onSubmit={handleSubmit} style={s.form} noValidate>
+        {error && (
+          <div style={s.errorBanner}>
+            <span>⚠️</span> {error}
           </div>
-          Product Details
-        </h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
-          <div className="md:col-span-2">
-            <label className="block text-zinc-500 text-xs font-bold uppercase tracking-widest mb-3">Product Title</label>
+        )}
+
+        <div style={s.heading}>
+          <h1 style={s.title}>Launch an Auction</h1>
+          <p style={s.subtitle}>Sell your items to the highest bidder in the campus marketplace.</p>
+        </div>
+
+        {/* ════════════ BASIC INFO ════════════ */}
+        <div style={s.card}>
+          <p style={s.cardHeading}>📋 Product Details</p>
+
+          <div style={s.field}>
+            <label style={s.label}>Product Title <span style={s.req}>*</span></label>
             <input
               type="text"
               required
               placeholder="e.g. Scientific Calculator Casio FX-991ES"
-              className="w-full bg-[#111] border border-white/10 rounded-2xl py-4 px-6 focus:outline-none focus:border-yellow-500/50 focus:ring-1 focus:ring-yellow-500/50 transition-all font-medium text-white placeholder:text-zinc-600"
+              style={s.input}
               value={formData.productTitle}
               onChange={e => setFormData({ ...formData, productTitle: e.target.value })}
+              onFocus={e => Object.assign(e.target.style, s.focusStyle)}
+              onBlur={e => Object.assign(e.target.style, s.input)}
             />
           </div>
 
-          <div>
-            <label className="block text-zinc-500 text-xs font-bold uppercase tracking-widest mb-3">Category</label>
-            <select
-              required
-              className="w-full bg-[#111] border border-white/10 rounded-2xl py-4 px-6 focus:outline-none focus:border-yellow-500/50 focus:ring-1 focus:ring-yellow-500/50 transition-all appearance-none font-medium text-white text-base"
-              value={formData.category}
-              onChange={e => setFormData({ ...formData, category: e.target.value })}
-            >
-              <option value="" disabled className="text-zinc-600">Select Category</option>
-              {CATEGORIES.map(c => <option key={c} value={c} className="bg-zinc-900">{c}</option>)}
-            </select>
-          </div>
+          <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+            <div style={{ flex: 1, ...s.field }}>
+              <label style={s.label}>Category <span style={s.req}>*</span></label>
+              <select
+                required
+                style={s.select}
+                value={formData.category}
+                onChange={e => setFormData({ ...formData, category: e.target.value })}
+              >
+                <option value="" disabled>Select Category</option>
+                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
 
-          <div>
-            <label className="block text-zinc-500 text-xs font-bold uppercase tracking-widest mb-3">Condition</label>
-            <div className="grid grid-cols-3 gap-3">
-              {["New", "Good", "Used"].map(c => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, condition: c as any })}
-                  className={`py-4 rounded-xl text-sm font-bold transition-all border shadow-sm ${
-                    formData.condition === c 
-                    ? "bg-yellow-500/10 border-yellow-500 text-yellow-400" 
-                    : "bg-[#111] border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
-                  }`}
-                >
-                  {c}
-                </button>
-              ))}
+            <div style={{ flex: 1, ...s.field }}>
+              <label style={s.label}>Condition <span style={s.req}>*</span></label>
+              <select
+                required
+                style={s.select}
+                value={formData.condition}
+                onChange={e => setFormData({ ...formData, condition: e.target.value })}
+              >
+                {["New", "Good", "Used"].map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
           </div>
 
-          <div className="md:col-span-2">
-            <label className="block text-zinc-500 text-xs font-bold uppercase tracking-widest mb-3">Description</label>
+          <div style={s.field}>
+            <label style={s.label}>Description <span style={s.req}>*</span></label>
             <textarea
-              rows={5}
-              placeholder="Tell buyers about your product. Include details about its condition, features, and why you are selling it."
-              className="w-full bg-[#111] border border-white/10 rounded-2xl py-4 px-6 focus:outline-none focus:border-yellow-500/50 focus:ring-1 focus:ring-yellow-500/50 transition-all font-medium text-white placeholder:text-zinc-600 resize-none"
+              rows={4}
+              required
+              placeholder="Tell buyers about your product. Include details about its condition, features, etc."
+              style={s.textarea}
               value={formData.description}
               onChange={e => setFormData({ ...formData, description: e.target.value })}
+              onFocus={e => Object.assign(e.target.style, ...[s.textarea, s.focusStyle])}
+              onBlur={e => Object.assign(e.target.style, s.textarea)}
             />
           </div>
         </div>
-      </div>
 
-      {/* Auction Settings */}
-      <div className="bg-[#0a0a0a] border border-white/5 shadow-2xl rounded-[2.5rem] p-8 lg:p-12 relative overflow-hidden group">
-        <h2 className="text-2xl font-black flex items-center gap-4 mb-10 relative z-10">
-          <div className="relative flex items-center justify-center w-10 h-10">
-             <span className="absolute inset-0 bg-yellow-500/20 rounded-full blur-md" />
-             <span className="relative bg-yellow-500/10 text-yellow-500 border border-yellow-500/30 w-full h-full rounded-full flex items-center justify-center text-sm font-black shadow-inner">2</span>
-          </div>
-          Bidding & Time
-        </h2>
+        {/* ════════════ AUCTION SETTINGS ════════════ */}
+        <div style={s.card}>
+          <p style={s.cardHeading}>⏳ Bidding & Time</p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
-          <div>
-            <label className="block text-zinc-500 text-xs font-bold uppercase tracking-widest mb-3">Starting Bid</label>
-            <div className="relative">
-              <span className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-500 font-bold">₹</span>
+          <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+            <div style={{ flex: 1, ...s.field }}>
+              <label style={s.label}>Starting Bid (₹) <span style={s.req}>*</span></label>
               <input
                 type="number"
                 required
                 placeholder="e.g. 500"
-                className="w-full bg-[#111] border border-white/10 rounded-2xl py-4 pl-12 pr-6 focus:outline-none focus:border-yellow-500/50 focus:ring-1 focus:ring-yellow-500/50 transition-all font-black text-xl text-white placeholder:text-zinc-700"
+                style={s.input}
                 value={formData.startingPrice}
                 onChange={e => setFormData({ ...formData, startingPrice: e.target.value })}
+                onFocus={e => Object.assign(e.target.style, s.focusStyle)}
+                onBlur={e => Object.assign(e.target.style, s.input)}
               />
             </div>
-          </div>
 
-          <div>
-            <label className="block text-zinc-500 text-xs font-bold uppercase tracking-widest mb-3">Min. Bid Increment</label>
-            <div className="relative">
-              <span className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-500 font-bold">₹</span>
+            <div style={{ flex: 1, ...s.field }}>
+              <label style={s.label}>Min. Increment (₹) <span style={s.req}>*</span></label>
               <input
                 type="number"
                 required
                 placeholder="e.g. 10"
-                className="w-full bg-[#111] border border-white/10 rounded-2xl py-4 pl-12 pr-6 focus:outline-none focus:border-yellow-500/50 focus:ring-1 focus:ring-yellow-500/50 transition-all font-black text-xl text-white placeholder:text-zinc-700"
+                style={s.input}
                 value={formData.minIncrement}
                 onChange={e => setFormData({ ...formData, minIncrement: e.target.value })}
+                onFocus={e => Object.assign(e.target.style, s.focusStyle)}
+                onBlur={e => Object.assign(e.target.style, s.input)}
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-zinc-500 text-xs font-bold uppercase tracking-widest mb-3">Duration</label>
-            <div className="relative">
+          <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
+            <div style={{ flex: 1, ...s.field }}>
+              <label style={s.label}>Duration <span style={s.req}>*</span></label>
               <select
-                className="w-full bg-[#111] border border-white/10 rounded-2xl py-4 px-6 focus:outline-none focus:border-yellow-500/50 focus:ring-1 focus:ring-yellow-500/50 transition-all appearance-none font-bold text-lg text-white"
+                style={s.select}
                 value={formData.durationHours}
                 onChange={e => setFormData({ ...formData, durationHours: e.target.value })}
               >
                 {[1, 6, 12, 24, 48, 72].map(h => (
-                  <option key={h} value={h} className="bg-zinc-900">{h} {h === 1 ? 'Hour' : 'Hours'}</option>
+                  <option key={h} value={h}>{h} {h === 1 ? 'Hour' : 'Hours'}</option>
                 ))}
               </select>
-              <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">▼</div>
             </div>
-          </div>
 
-          <div>
-            <label className="block text-zinc-500 text-xs font-bold uppercase tracking-widest mb-3 flex items-center justify-between">
-              <span>Reserve Price</span>
-              <span className="text-[10px] text-zinc-600 bg-white/5 px-2 py-0.5 rounded uppercase">Optional</span>
-            </label>
-            <div className="relative">
-              <span className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-500 font-bold">₹</span>
+            <div style={{ flex: 1, ...s.field }}>
+              <label style={s.label}>
+                Reserve Price (₹) <span style={s.optional}> — optional</span>
+              </label>
               <input
                 type="number"
                 placeholder="Secret minimum"
-                className="w-full bg-[#111] border border-white/10 rounded-2xl py-4 pl-12 pr-6 focus:outline-none focus:border-yellow-500/50 focus:ring-1 focus:ring-yellow-500/50 transition-all font-bold text-lg text-white placeholder:text-zinc-600"
+                style={s.input}
                 value={formData.reservePrice}
                 onChange={e => setFormData({ ...formData, reservePrice: e.target.value })}
+                onFocus={e => Object.assign(e.target.style, s.focusStyle)}
+                onBlur={e => Object.assign(e.target.style, s.input)}
               />
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Images */}
-      <div className="bg-[#0a0a0a] border border-white/5 shadow-2xl rounded-[2.5rem] p-8 lg:p-12 relative overflow-hidden group">
-        <h2 className="text-2xl font-black flex items-center gap-4 mb-10 relative z-10">
-          <div className="relative flex items-center justify-center w-10 h-10">
-             <span className="absolute inset-0 bg-yellow-500/20 rounded-full blur-md" />
-             <span className="relative bg-yellow-500/10 text-yellow-500 border border-yellow-500/30 w-full h-full rounded-full flex items-center justify-center text-sm font-black shadow-inner">3</span>
-          </div>
-          Upload Media
-        </h2>
+        {/* ════════════ IMAGES ════════════ */}
+        <div style={s.card}>
+          <p style={s.cardHeading}>
+            📸 Upload Media <span style={s.req}>*</span>
+          </p>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 relative z-10">
-          {previews.map((src, idx) => (
-            <div key={idx} className="aspect-square relative rounded-3xl overflow-hidden border border-white/10 group/img shadow-xl">
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity z-10" />
-              <img src={src} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-110" />
-              <button
-                type="button"
-                onClick={() => removeImage(idx)}
-                className="absolute top-3 right-3 bg-red-500/80 backdrop-blur text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg hover:bg-red-500 transition-all z-20 shadow-lg scale-0 group-hover/img:scale-100"
-              >
-                ×
-              </button>
-            </div>
-          ))}
-          
-          <label className="aspect-square border-2 border-dashed border-white/10 hover:border-yellow-500/50 rounded-3xl flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-yellow-500/5 group/upload shadow-inner">
-            <span className="text-4xl mb-3 group-hover/upload:scale-110 group-hover/upload:-translate-y-1 transition-all duration-300">📸</span>
-            <span className="text-xs font-bold uppercase tracking-widest text-zinc-500 group-hover/upload:text-yellow-400 transition-colors">Select Photos</span>
-            <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageChange} />
+          <label style={s.dropzone}>
+            <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>📷</div>
+            <p style={{ color: "#94a3b8", fontSize: "0.9rem", margin: 0 }}>Click to select photos</p>
+            <input type="file" multiple accept="image/*" style={{ display: "none" }} onChange={handleImageChange} />
           </label>
-        </div>
-      </div>
 
-      <div className="flex flex-col-reverse md:flex-row justify-end gap-4 pb-24 pt-8">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="px-8 py-5 rounded-2xl font-bold text-zinc-500 hover:text-white hover:bg-white/5 transition-all text-sm uppercase tracking-widest w-full md:w-auto"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={loading}
-          className="group relative overflow-hidden bg-yellow-500 hover:bg-yellow-400 disabled:bg-zinc-800 disabled:opacity-50 text-black font-black px-12 py-5 rounded-2xl transition-all shadow-[0_0_30px_rgba(234,179,8,0.2)] hover:shadow-[0_0_40px_rgba(234,179,8,0.4)] disabled:shadow-none w-full md:w-auto border border-yellow-400 disabled:border-transparent"
-        >
-          {!loading && <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />}
-          <span className="relative z-10 flex items-center justify-center gap-2 text-lg uppercase tracking-wide">
-            {loading ? "Initializing..." : "Launch Auction 🔥"}
-          </span>
-        </button>
-      </div>
-    </form>
+          {previews.length > 0 && (
+            <div style={s.thumbGrid}>
+              {previews.map((src, idx) => (
+                <div key={idx} style={s.thumbWrap}>
+                  <img src={src} alt="" style={s.thumb} />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(idx)}
+                    style={s.thumbRemove}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ════════════ ACTIONS ════════════ */}
+        <div style={s.actions}>
+          <button
+            type="button"
+            style={s.btnSecondary}
+            onClick={() => router.back()}
+            disabled={loading}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            style={{
+              ...s.btnPrimary,
+              ...(loading ? s.btnDisabled : {}),
+            }}
+            disabled={loading}
+          >
+            {loading ? (
+              <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <span style={s.spinner} /> Initializing...
+              </span>
+            ) : (
+              " Launch Auction 🔥"
+            )}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }
+
+const s: Record<string, React.CSSProperties> = {
+  page: {
+    maxWidth: "760px",
+    margin: "0 auto",
+  },
+  form: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "1.5rem",
+  },
+  heading: {
+    paddingBottom: "0.5rem",
+  },
+  title: {
+    fontSize: "1.5rem",
+    fontWeight: 800,
+    color: "#f8fafc",
+    letterSpacing: "-0.02em",
+    margin: "0 0 0.35rem",
+  },
+  subtitle: {
+    color: "#64748b",
+    fontSize: "0.875rem",
+    margin: 0,
+  },
+  errorBanner: {
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    border: "1px solid rgba(239, 68, 68, 0.3)",
+    color: "#ef4444",
+    padding: "1rem",
+    borderRadius: "10px",
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+    fontSize: "0.9rem",
+    fontWeight: 700,
+  },
+  card: {
+    backgroundColor: "#121212",
+    border: "1px solid #1f1f1f",
+    borderRadius: "16px",
+    padding: "1.75rem",
+    display: "flex",
+    flexDirection: "column",
+    gap: "1.25rem",
+  },
+  cardHeading: {
+    fontSize: "0.9rem",
+    fontWeight: 700,
+    color: "#e2e8f0",
+    margin: 0,
+    paddingBottom: "0.75rem",
+    borderBottom: "1px solid #1f1f1f",
+  },
+  field: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "0.4rem",
+  },
+  label: {
+    fontSize: "0.85rem",
+    fontWeight: 700,
+    color: "#cbd5e1",
+  },
+  req: { color: "#f87171" },
+  optional: { color: "#4b5563", fontWeight: 400 },
+  input: {
+    width: "100%",
+    padding: "0.7rem 1rem",
+    backgroundColor: "#0a0a0a",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "#2a2a2a",
+    borderRadius: "8px",
+    color: "#f8fafc",
+    fontSize: "0.875rem",
+    outline: "none",
+    transition: "border-color 0.2s, box-shadow 0.2s",
+    fontFamily: "inherit",
+  },
+  focusStyle: {
+    borderColor: "#f59e0b",
+    boxShadow: "0 0 0 3px rgba(245,158,11,0.12)",
+  },
+  textarea: {
+    width: "100%",
+    padding: "0.7rem 1rem",
+    backgroundColor: "#0a0a0a",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "#2a2a2a",
+    borderRadius: "8px",
+    color: "#f8fafc",
+    fontSize: "0.875rem",
+    outline: "none",
+    resize: "vertical",
+    fontFamily: "inherit",
+    lineHeight: 1.6,
+    transition: "border-color 0.2s, box-shadow 0.2s",
+  },
+  select: {
+    width: "100%",
+    padding: "0.7rem 1rem",
+    backgroundColor: "#0a0a0a",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "#2a2a2a",
+    borderRadius: "8px",
+    color: "#f8fafc",
+    fontSize: "0.875rem",
+    outline: "none",
+    cursor: "pointer",
+    fontFamily: "inherit",
+    appearance: "none",
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "right 1rem center",
+    transition: "border-color 0.2s",
+  },
+  dropzone: {
+    borderWidth: "2px",
+    borderStyle: "dashed",
+    borderColor: "#2a2a2a",
+    borderRadius: "12px",
+    padding: "2.5rem",
+    textAlign: "center",
+    cursor: "pointer",
+    transition: "all 0.2s",
+    backgroundColor: "#0a0a0a",
+    display: "block",
+  },
+  thumbGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))",
+    gap: "1rem",
+    marginTop: "1rem",
+  },
+  thumbWrap: {
+    position: "relative",
+    aspectRatio: "1/1",
+    borderRadius: "8px",
+    overflow: "hidden",
+    border: "1px solid #1f1f1f",
+  },
+  thumb: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
+  thumbRemove: {
+    position: "absolute",
+    top: "0.3rem",
+    right: "0.3rem",
+    width: "22px",
+    height: "22px",
+    borderRadius: "50%",
+    backgroundColor: "rgba(0,0,0,0.7)",
+    color: "#fff",
+    border: "none",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "14px",
+    transition: "background-color 0.2s",
+  },
+  actions: {
+    display: "flex",
+    gap: "1rem",
+    marginTop: "1rem",
+    paddingBottom: "4rem",
+  },
+  btnPrimary: {
+    flex: 2,
+    padding: "0.8rem",
+    backgroundColor: "#f59e0b",
+    color: "#000",
+    border: "none",
+    borderRadius: "10px",
+    fontWeight: 700,
+    fontSize: "0.95rem",
+    cursor: "pointer",
+    transition: "all 0.2s",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  btnSecondary: {
+    flex: 1,
+    padding: "0.8rem",
+    backgroundColor: "transparent",
+    color: "#94a3b8",
+    border: "1px solid #2a2a2a",
+    borderRadius: "10px",
+    fontWeight: 600,
+    fontSize: "0.9rem",
+    cursor: "pointer",
+    transition: "all 0.2s",
+  },
+  btnDisabled: {
+    opacity: 0.5,
+    cursor: "not-allowed",
+  },
+  spinner: {
+    width: "16px",
+    height: "16px",
+    border: "2px solid rgba(0,0,0,0.1)",
+    borderTopColor: "#000",
+    borderRadius: "50%",
+    animation: "spin 0.8s linear infinite",
+  },
+};
