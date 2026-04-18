@@ -14,7 +14,9 @@ export interface IUser extends Document {
   email: string;       // College email — must be unique
   college: string;     // Must be from the approved list
   password: string;    // Stored as bcrypt hash — NEVER plain text
+  isVerified: boolean; // Added for admin verification
   createdAt: Date;
+  updatedAt: Date;
 }
 
 /* ------------------------------------------------------------------ */
@@ -40,7 +42,7 @@ const UserSchema = new Schema<IUser>(
         "Please provide a valid email address",
       ],
     },
-  college: {
+    college: {
       type: String,
       required: [true, "College name is required"],
       trim: true,
@@ -49,6 +51,10 @@ const UserSchema = new Schema<IUser>(
       type: String,
       required: [true, "Password is required"],
       minlength: [6, "Password must be at least 6 characters"],
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
     },
   },
   {

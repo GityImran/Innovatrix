@@ -45,6 +45,21 @@ function LoginContent() {
     setError(null);
     setLoading(true);
 
+    // Admin Credentials check
+    if (email === "admin@college.edu" && password === "admin123") {
+      document.cookie = `userEmail=${email}; path=/`;
+      router.push("/dashboard/admin");
+      setLoading(false);
+      return;
+    }
+
+    // Show specific error for admin email with wrong password
+    if (email === "admin@college.edu") {
+      setError("Invalid admin credentials");
+      setLoading(false);
+      return;
+    }
+
     try {
       const result = await signIn("credentials", {
         email,
