@@ -5,6 +5,7 @@ import { auth } from '@/lib/auth';
 import UserAuthDropdown from './UserAuthDropdown';
 import SearchForm from './SearchForm';
 import UnreadBadge from './UnreadBadge';
+import CartCount from './CartCount';
 
 export default async function Header() {
   const session = await auth();
@@ -40,11 +41,11 @@ export default async function Header() {
             <span className={styles.actionLabel}>Returns</span>
             <span className={styles.actionBold}>& Orders</span>
           </div>
-          <div className={`${styles.actionItem} ${styles.cart}`}>
+          <Link href="/cart" className={`${styles.actionItem} ${styles.cart}`}>
             <span className={styles.cartIcon}>🛒</span>
-            <span className={styles.cartCount}>0</span>
+            <CartCount />
             <span className={styles.actionBold}>Cart</span>
-          </div>
+          </Link>
         </div>
       </div>
     </header>
