@@ -28,6 +28,12 @@ export default async function Header() {
         </div>
 
         <div className={styles.userActions}>
+          <div className={styles.supercoinsChip}>
+            <span>🪙</span>
+            <span>SuperCoins</span>
+            <span className={styles.supercoinsLabel}>Soon</span>
+          </div>
+
           <UserAuthDropdown session={session} />
           {session?.user && (
             <Link href="/chat" className={styles.messagesLink}>

@@ -13,8 +13,9 @@ import React, {
   DragEvent,
   ChangeEvent,
   FormEvent,
+  Suspense,
 } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { uploadImage } from "@/lib/upload";
 import { FairPriceChecker } from "@/app/components/FairPriceChecker/FairPriceChecker";
 import { checkCondition, AIConditionResponse } from "@/lib/aiCondition";
@@ -53,14 +54,15 @@ const CATEGORIES: Category[] = [
   "Others",
 ];
 
-export default function AddProductPage() {
+function AddProductForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   /* ── State ── */
-  const [category, setCategory] = useState<Category>("");
-  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState<Category>((searchParams.get("category") as Category) || "");
+  const [title, setTitle] = useState(searchParams.get("title") || "");
   const [description, setDescription] = useState("");
-  const [condition, setCondition] = useState<Condition>("");
+  const [condition, setCondition] = useState<Condition>((searchParams.get("condition") as Condition) || "");
   const [originalPrice, setOriginalPrice] = useState("");
   const [expectedPrice, setExpectedPrice] = useState("");
   const [images, setImages] = useState<ImagePreview[]>([]);
@@ -290,12 +292,27 @@ export default function AddProductPage() {
         }),
       });
 
+      const productData = await res.json();
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to save draft");
+        throw new Error(productData.error || "Failed to save draft");
       }
 
-      router.push("/seller/products");
+      const fromRequest = searchParams.get("fromRequest");
+
+      if (fromRequest) {
+        // Automatically respond to the request
+        await fetch("/api/requests/respond", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            requestId: fromRequest,
+            productId: productData._id,
+          }),
+        });
+        router.push(`/requests/${fromRequest}`);
+      } else {
+        router.push("/seller/products");
+      }
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -770,6 +787,14 @@ export default function AddProductPage() {
   );
 }
 
+export default function AddProductPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AddProductForm />
+    </Suspense>
+  );
+}
+
 /* ────────────────────── Styles ────────────────────── */
 const s: Record<string, React.CSSProperties> = {
   page: {
@@ -984,165 +1009,148 @@ const s: Record<string, React.CSSProperties> = {
     margin: 0,
   },
   thumbGrid: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "0.75rem",
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))",
+    gap: "1rem",
   },
   thumbWrap: {
     position: "relative",
-    width: "96px",
-    height: "96px",
-    borderRadius: "10px",
+    aspectRatio: "1/1",
+    borderRadius: "8px",
     overflow: "hidden",
-    border: "1px solid #2a2a2a",
+    border: "1px solid #1f1f1f",
   },
   thumb: {
     width: "100%",
     height: "100%",
     objectFit: "cover",
-    display: "block",
   },
   mainBadge: {
     position: "absolute",
-    bottom: "4px",
-    left: "4px",
+    bottom: "0.4rem",
+    left: "0.4rem",
     backgroundColor: "#f59e0b",
     color: "#000",
-    fontSize: "0.55rem",
+    fontSize: "0.6rem",
     fontWeight: 800,
+    padding: "2px 6px",
     borderRadius: "4px",
-    padding: "1px 5px",
+    textTransform: "uppercase",
   },
   thumbRemove: {
     position: "absolute",
-    top: "4px",
-    right: "4px",
-    background: "rgba(0,0,0,0.7)",
-    color: "#fff",
-    border: "none",
-    borderRadius: "50%",
+    top: "0.3rem",
+    right: "0.3rem",
     width: "20px",
     height: "20px",
+    borderRadius: "50%",
+    backgroundColor: "rgba(0,0,0,0.6)",
+    color: "#fff",
+    border: "none",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: "1rem",
-    lineHeight: 1,
-    padding: 0,
+    fontSize: "14px",
+    transition: "background-color 0.2s",
   },
   /* Advanced */
   advRow: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "space-between",
     gap: "1rem",
   },
   advTitle: {
     fontSize: "0.875rem",
-    fontWeight: 600,
+    fontWeight: 700,
     color: "#e2e8f0",
     margin: 0,
   },
   advSub: {
-    fontSize: "0.72rem",
+    fontSize: "0.75rem",
     color: "#4b5563",
-    marginTop: "0.15rem",
-    marginBottom: 0,
+    margin: "0.15rem 0 0",
   },
   toggle: {
-    width: "48px",
-    height: "26px",
-    borderRadius: "13px",
+    width: "44px",
+    height: "24px",
+    borderRadius: "12px",
+    padding: "2px",
     border: "none",
     cursor: "pointer",
+    transition: "background-color 0.2s",
     position: "relative",
-    transition: "background-color 0.25s",
-    flexShrink: 0,
-    padding: 0,
   },
   toggleOn: { backgroundColor: "#f59e0b" },
-  toggleOff: { backgroundColor: "#374151" },
+  toggleOff: { backgroundColor: "#2a2a2a" },
   toggleKnob: {
-    position: "absolute",
-    top: "3px",
-    left: "3px",
     width: "20px",
     height: "20px",
     borderRadius: "50%",
     backgroundColor: "#fff",
-    transition: "left 0.25s",
     display: "block",
+    transition: "transform 0.2s",
   },
-  toggleKnobOn: { left: "25px" },
+  toggleKnobOn: { transform: "translateX(20px)" },
   checkbox: {
     width: "18px",
     height: "18px",
     accentColor: "#f59e0b",
-    cursor: "pointer",
-    flexShrink: 0,
-    marginTop: "2px",
+    marginTop: "0.15rem",
   },
-  /* Action buttons */
+  /* Actions */
   actions: {
     display: "flex",
-    gap: "0.75rem",
-    justifyContent: "flex-end",
-    flexWrap: "wrap",
-    paddingBottom: "1.5rem",
+    gap: "1rem",
+    marginTop: "1rem",
+    paddingBottom: "4rem",
   },
   btnPrimary: {
-    padding: "0.75rem 2rem",
+    flex: 2,
+    padding: "0.8rem",
     backgroundColor: "#f59e0b",
     color: "#000",
     border: "none",
     borderRadius: "10px",
-    fontSize: "0.9rem",
     fontWeight: 700,
+    fontSize: "0.95rem",
     cursor: "pointer",
-    fontFamily: "inherit",
-    minWidth: "130px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "0.5rem",
-    transition: "background-color 0.2s",
+    transition: "all 0.2s",
   },
-  btnDraft: {
-    padding: "0.75rem 1.5rem",
+  btnSecondary: {
+    flex: 1,
+    padding: "0.8rem",
     backgroundColor: "transparent",
     color: "#94a3b8",
     border: "1px solid #2a2a2a",
     borderRadius: "10px",
-    fontSize: "0.875rem",
     fontWeight: 600,
+    fontSize: "0.9rem",
     cursor: "pointer",
-    fontFamily: "inherit",
-    transition: "border-color 0.2s",
+    transition: "all 0.2s",
   },
-  btnSecondary: {
-    padding: "0.75rem 1.25rem",
-    backgroundColor: "transparent",
-    color: "#64748b",
-    border: "1px solid #1f1f1f",
+  btnDraft: {
+    flex: 1,
+    padding: "0.8rem",
+    backgroundColor: "#1f1f1f",
+    color: "#e2e8f0",
+    border: "1px solid #2a2a2a",
     borderRadius: "10px",
-    fontSize: "0.875rem",
     fontWeight: 600,
+    fontSize: "0.9rem",
     cursor: "pointer",
-    fontFamily: "inherit",
+    transition: "all 0.2s",
   },
   btnDisabled: {
-    backgroundColor: "#1f2937",
-    color: "#4b5563",
+    opacity: 0.5,
     cursor: "not-allowed",
   },
   spinner: {
-    display: "inline-block",
-    width: "14px",
-    height: "14px",
-    border: "2px solid #000",
-    borderTopColor: "transparent",
+    width: "16px",
+    height: "16px",
+    border: "2px solid rgba(0,0,0,0.1)",
+    borderTopColor: "#000",
     borderRadius: "50%",
-    animation: "spin 0.6s linear infinite",
+    animation: "spin 0.8s linear infinite",
   },
 };

@@ -83,7 +83,7 @@ export default async function Home() {
         <Hero />
 
         {/* Main E-commerce Layout */}
-        <div style={{ backgroundColor: 'var(--bg-color)', minHeight: '100vh', padding: '0 0 2rem 0' }}>
+        <div id="shop" style={{ scrollMarginTop: '100px', backgroundColor: 'var(--bg-color)', minHeight: '100vh', padding: '0 0 2rem 0' }}>
           
           <div style={{ position: 'relative', top: '-100px', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '40px' }}>
             {showMock ? (
