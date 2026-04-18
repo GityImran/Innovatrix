@@ -157,3 +157,30 @@
 .addToCartBtn:hover {
   background-color: var(--primary-hover);
 }
+
+.ownProductBadge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background-color: #f59e0b; /* Amber */
+  color: #000;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: var(--border-radius-sm);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  z-index: 5;
+}
+
+.ownProductBtn {
+  width: 100%;
+  background-color: var(--card-bg);
+  color: var(--text-muted);
+  border: 1px dashed var(--text-muted);
+  border-radius: 9999px;
+  padding: 0.5rem 0;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: not-allowed;
+  transition: all 0.2s;
+}

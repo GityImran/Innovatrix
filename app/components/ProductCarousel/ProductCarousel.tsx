@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import styles from './ProductCarousel.module.css';
 
-export default function ProductCarousel({ title, products }: { title: string, products: any[] }) {
+export default function ProductCarousel({ title, products, currentUserId }: { title: string, products: any[], currentUserId?: string }) {
   return (
     <section className={styles.section}>
       <div className="container">
@@ -12,7 +12,12 @@ export default function ProductCarousel({ title, products }: { title: string, pr
         </div>
         
         <div className={styles.carouselRow}>
-          {products.map((p, idx) => (
+          {products.map((p, idx) => {
+            const isOwnProduct = currentUserId && (
+              p.sellerId?.toString() === currentUserId || 
+              p.sellerId?._id?.toString() === currentUserId
+            );
+            return (
             <Link href={`/product/${p._id || p.id}`} key={p._id || p.id || idx} className={styles.productCard} style={{ textDecoration: 'none', color: 'inherit' }}>
               <div className={styles.imageWrapper}>
                 {p.image?.url || typeof p.image === 'string' ? (
@@ -23,6 +28,7 @@ export default function ProductCarousel({ title, products }: { title: string, pr
                   </div>
                 )}
                 {p.discount && <span className={styles.discountBadge}>{p.discount} Off</span>}
+                {isOwnProduct && <span className={styles.ownProductBadge}>Your Listing</span>}
               </div>
               <div className={styles.productInfo}>
                 <h3 className={`line-clamp-2 ${styles.productName}`}>{p.name || p.title}</h3>
@@ -37,10 +43,15 @@ export default function ProductCarousel({ title, products }: { title: string, pr
                   <span className={styles.seller}>Seller: {p.seller || p.sellerId?.name || 'Student'}</span>
                   <span className={styles.condition}>Cond: {p.condition}</span>
                 </div>
-                <button className={styles.addToCartBtn}>Add to Cart</button>
+                {isOwnProduct ? (
+                  <button className={styles.ownProductBtn} disabled>Your Listing</button>
+                ) : (
+                  <button className={styles.addToCartBtn}>Add to Cart</button>
+                )}
               </div>
             </Link>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

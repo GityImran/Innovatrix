@@ -91,10 +91,12 @@ export default async function Home() {
                 <ProductCarousel
                   title={isLoggedIn && college ? `Textbooks at ${college}` : 'Trending Textbooks'}
                   products={mockTextbooks}
+                  currentUserId={session?.user?.id}
                 />
                 <ProductCarousel
                   title={isLoggedIn && college ? `Lab & Electronics at ${college}` : 'Lab Equipment & Electronics'}
                   products={mockElectronics}
+                  currentUserId={session?.user?.id}
                 />
               </>
             ) : (
@@ -109,6 +111,7 @@ export default async function Home() {
                     key={categoryName}
                     title={title}
                     products={products}
+                    currentUserId={session?.user?.id}
                   />
                 );
               })
