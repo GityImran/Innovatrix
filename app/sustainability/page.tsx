@@ -14,6 +14,8 @@ import {
 import {
   LineChart,
   Line,
+  BarChart,
+  Bar,
   PieChart,
   Pie,
   Cell,
@@ -26,7 +28,8 @@ import {
 } from 'recharts';
 import styles from './Sustainability.module.css';
 import { getProducts, Product } from '../../lib/productStore';
-import { calculateStats, getSuggestions, SustainabilityStats } from '../../lib/sustainability';
+import { calculateStats, getSuggestions, SustainabilityStats, getCategoryImpact, CategoryImpact } from '../../lib/sustainability';
+import { Trash2, ShoppingBag, Gift, BarChart2 } from 'lucide-react';
 
 // Animation variants
 const fadeInUp: Variants = {
@@ -65,6 +68,7 @@ export default function SustainabilityPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [stats, setStats] = useState<SustainabilityStats | null>(null);
   const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [categoryImpact, setCategoryImpact] = useState<CategoryImpact[]>([]);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -73,18 +77,28 @@ export default function SustainabilityPage() {
     setProducts(allProducts);
     setStats(calculateStats(allProducts));
     setSuggestions(getSuggestions(allProducts));
+    setCategoryImpact(getCategoryImpact(allProducts));
   }, []);
 
   if (!isClient) return null;
 
   const pieData = [
-    { name: 'Active', value: products.filter(p => p.status === 'active').length || 12 },
-    { name: 'Donated', value: products.filter(p => p.expectedPrice === 0).length || 3 },
-    { name: 'Reused', value: products.filter(p => p.status === 'sold').length || 5 },
-    { name: 'Unsold', value: products.filter(p => p.status === 'draft').length || 2 },
+    { name: 'Reused (sold)', value: products.filter(p => p.status === 'sold').length || 15 },
+    { name: 'Donated', value: products.filter(p => p.expectedPrice === 0).length || 8 },
+    { name: 'Unsold', value: products.filter(p => p.status === 'draft').length || 5 },
   ];
 
+  const reusePercentage = products.length > 0 
+    ? Math.round(((products.filter(p => p.status === 'sold').length) / products.length) * 100) 
+    : 72;
+
   const lineData = generateMockHistory();
+  const barData = categoryImpact.length > 0 ? categoryImpact : [
+    { name: 'Clothes', co2Saved: 450 },
+    { name: 'Electronics', co2Saved: 380 },
+    { name: 'Books', co2Saved: 120 },
+    { name: 'Other', co2Saved: 80 },
+  ];
 
   return (
     <div className={styles.container}>
@@ -114,29 +128,31 @@ export default function SustainabilityPage() {
           animate="visible"
           variants={staggerContainer}
         >
-          {/* Chart 1: Line Chart */}
+          {/* Chart 1: CATEGORY IMPACT (Bar Chart) */}
           <motion.div className={styles.inlineChart} variants={fadeInUp}>
             <div className={styles.chartLabel}>
-              <Wind color="#10b981" size={20} /> CO₂ Avoidance Over Time
+              <BarChart2 color="#10b981" size={20} /> Category Impact
             </div>
-            <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={lineData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={barData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
                 <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
+                <YAxis hide />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#0f0f0f', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#f8fafc' }}
-                  itemStyle={{ color: '#10b981', fontWeight: 'bold' }}
+                  cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                  contentStyle={{ backgroundColor: '#0f0f0f', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
                 />
-                <Line type="monotone" dataKey="co2" stroke="#10b981" strokeWidth={3} dot={false} activeDot={{ r: 5 }} />
-              </LineChart>
+                <Bar dataKey="co2Saved" fill="#10b981" radius={[4, 4, 0, 0]} />
+              </BarChart>
             </ResponsiveContainer>
+            <div className={styles.insightText}>
+              “Clothing reuse contributes the highest environmental benefit due to high turnover.”
+            </div>
           </motion.div>
 
-          {/* Chart 2: Pie Chart */}
+          {/* Chart 2: ITEM FLOW DISTRIBUTION (Pie Chart) */}
           <motion.div className={styles.inlineChart} variants={fadeInUp}>
             <div className={styles.chartLabel}>
-              <Recycle color="#f59e0b" size={20} /> Ecosystem Distribution
+              <Recycle color="#f59e0b" size={20} /> Item Flow Distribution
             </div>
             <ResponsiveContainer width="100%" height={240}>
               <PieChart>
@@ -144,9 +160,9 @@ export default function SustainabilityPage() {
                   data={pieData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={70}
-                  outerRadius={95}
-                  paddingAngle={6}
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={8}
                   dataKey="value"
                   stroke="none"
                 >
@@ -157,29 +173,53 @@ export default function SustainabilityPage() {
                 <Tooltip contentStyle={{ backgroundColor: '#0f0f0f', border: 'none', borderRadius: '8px' }} />
               </PieChart>
             </ResponsiveContainer>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '16px', justifyContent: 'center' }}>
-              {pieData.map((entry, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#94a3b8' }}>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: COLORS[i] }}></div>
-                  {entry.name}
-                </div>
-              ))}
+            <div className={styles.insightText}>
+              “{reusePercentage}% of listed items are successfully reused, reducing landfill dependency.”
             </div>
           </motion.div>
 
-          {/* Chart 3: Campus Goal Progress */}
+          {/* Chart 3: WASTE DIVERTED (Progress/Bar Graph) */}
           <motion.div className={styles.inlineChart} variants={fadeInUp}>
             <div className={styles.chartLabel}>
-              <GlobeIcon color="#22c55e" size={20} /> Campus Goal Progress
+              <Trash2 color="#3b82f6" size={20} /> Waste Diverted
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
-              <div style={{ fontSize: '3rem', fontWeight: '900', color: '#22c55e', textShadow: '0 0 40px rgba(34, 197, 94, 0.2)' }}>Phase 1</div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#f8fafc', marginTop: '0.5rem' }}>{(stats?.circularityScore || 62).toFixed(0)}% Health</div>
-              <div style={{ color: '#64748b', fontSize: '12px', textAlign: 'center', marginTop: '20px', maxWidth: '180px' }}>
-                We are 59% of the way to our semester footprint goal!
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, padding: '20px' }}>
+              <div className={styles.wasteValue}>
+                {stats?.wasteDiverted || 342}
+              </div>
+              <div className={styles.wasteLabel}>Items Prevented from Landfill</div>
+              <div className={styles.progressBarContainer}>
+                <div className={styles.progressBar} style={{ width: '65%' }}></div>
               </div>
             </div>
+            <div className={styles.insightText}>
+              “Your campus has diverted {stats?.wasteDiverted || 342} items from potential waste streams.”
+            </div>
           </motion.div>
+        </motion.div>
+
+        {/* Row 3: MAIN TREND CHART (Now moved below) */}
+        <motion.div
+           className={styles.heroMainChart}
+           initial="hidden"
+           animate="visible"
+           variants={fadeInUp}
+        >
+          <div className={styles.chartLabel}>
+            <Wind color="#10b981" size={20} /> CO₂ Avoidance Trend (Total Impact)
+          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={lineData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
+              <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#0f0f0f', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#f8fafc' }}
+                itemStyle={{ color: '#10b981', fontWeight: 'bold' }}
+              />
+              <Line type="monotone" dataKey="co2" stroke="#10b981" strokeWidth={3} dot={false} activeDot={{ r: 5 }} />
+            </LineChart>
+          </ResponsiveContainer>
         </motion.div>
 
         {/* Row 3: Stat Column Row (Bottom of Hero) */}

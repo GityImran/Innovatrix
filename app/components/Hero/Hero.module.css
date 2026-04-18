@@ -52,12 +52,27 @@
 .tag {
   background-color: var(--accent-color);
   color: white;
-  padding: 0.25rem 0.75rem;
+  padding: 0.5rem 1.25rem;
   font-weight: 700;
   font-size: 0.875rem;
-  margin-bottom: 1rem;
-  border-radius: var(--border-radius-sm);
+  margin-bottom: 1.5rem;
+  border-radius: 50px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tag::after {
+  content: '→';
+  font-size: 1.1rem;
+  transition: transform 0.2s;
+}
+
+.tagLink:hover .tag::after {
+  transform: translateX(4px);
 }
 
 .title {

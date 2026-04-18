@@ -9,7 +9,7 @@ export default function Hero() {
         <div className={styles.banner}>
           <div className={styles.bannerContent}>
             <Link href="/sustainability" className={styles.tagLink}>
-              <span className={styles.tag}>Mission LiFE Super Saver</span>
+              <span className={styles.tag}>Sustainability</span>
             </Link>
             <h1 className={styles.title}>Back to Campus Sale</h1>
             <p className={styles.desc}>Save up to 80% on pre-owned textbooks, lab equipments, and electronics.</p>
