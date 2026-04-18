@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     const cartItems = await CartItem.find({ userId: session.user.id })
       .populate({
         path: "itemId",
-        select: "title expectedPrice pricing image category status",
+        select: "title productTitle expectedPrice startingPrice currentBid pricing image images category status",
       })
       .sort({ addedAt: -1 });
 

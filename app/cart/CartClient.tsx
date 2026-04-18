@@ -13,7 +13,8 @@ type CartItem = {
     title: string;
     productTitle?: string; // For Auction model
     expectedPrice?: number;
-    currentBid?: number; // For Auction model
+    startingPrice?: number; // For Auction model fallback
+    currentBid?: number; // For Auction model (final price)
     pricing?: { day?: number };
     image?: { url: string };
     images?: string[]; // For Auction model
@@ -144,7 +145,7 @@ function CartContent({ initialSuperCoins = 0 }: { initialSuperCoins?: number }) 
     } else if (item.itemModel === "RentItem") {
       price = item.itemId?.pricing?.day || 0;
     } else if (item.itemModel === "Auction") {
-      price = item.itemId?.currentBid || 0;
+      price = item.itemId?.currentBid || item.itemId?.startingPrice || 0;
     }
     return acc + price;
   }, 0);
@@ -441,7 +442,7 @@ function CartContent({ initialSuperCoins = 0 }: { initialSuperCoins?: number }) 
                 } else if (isRent) {
                   price = product?.pricing?.day || 0;
                 } else if (isAuction) {
-                  price = product?.currentBid || 0;
+                  price = product?.currentBid || product?.startingPrice || 0;
                   title = product?.productTitle || "Won Auction";
                   imageUrl = product?.images && product.images.length > 0 ? product.images[0] : undefined;
                   detailUrl = `/auction/${product?._id}`;
@@ -577,7 +578,7 @@ function CartContent({ initialSuperCoins = 0 }: { initialSuperCoins?: number }) 
                   } else if (isRent) {
                     price = product?.pricing?.day || 0;
                   } else if (isAuction) {
-                    price = product?.currentBid || 0;
+                    price = product?.currentBid || product?.startingPrice || 0;
                     title = product?.productTitle || "Won Auction";
                     imageUrl = product?.images && product.images.length > 0 ? product.images[0] : undefined;
                     detailUrl = `/auction/${product?._id}`;
@@ -605,6 +606,24 @@ function CartContent({ initialSuperCoins = 0 }: { initialSuperCoins?: number }) 
                               {title}
                             </h3>
                           </Link>
+
+                          {item.itemModel === "Auction" && (
+                            <div style={{ 
+                              display: "inline-flex", 
+                              alignItems: "center", 
+                              gap: "4px", 
+                              marginTop: "6px",
+                              padding: "2px 8px",
+                              borderRadius: "4px",
+                              backgroundColor: "rgba(245,158,11,0.1)",
+                              border: "1px solid rgba(245,158,11,0.2)"
+                            }}>
+                              <Tag size={12} color="#fbbf24" />
+                              <span style={{ fontSize: "10px", fontWeight: 700, color: "#fbbf24", textTransform: "uppercase" }}>
+                                Final Auction Price
+                              </span>
+                            </div>
+                          )}
 
                           {item.isNegotiated && (
                             <div style={{ 

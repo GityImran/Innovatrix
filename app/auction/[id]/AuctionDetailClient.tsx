@@ -4,6 +4,9 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import CountdownTimer from "@/app/components/Auction/CountdownTimer";
 import { formatDistanceToNow } from "date-fns";
+import { io } from "socket.io-client";
+
+let socket: any;
 
 interface AuctionDetailClientProps {
   initialAuction: any;
@@ -82,28 +85,69 @@ export default function AuctionDetailClient({
     }
   };
 
-  // Poll for updates every 10 seconds
+  // Socket.io initialization and listeners
   useEffect(() => {
-    const interval = setInterval(fetchUpdatedData, 10000);
+    const socketInitializer = async () => {
+      // Initialize socket connection
+      socket = io({
+        path: "/api/socket",
+      });
+
+      socket.on("connect", () => {
+        console.log("Socket connected");
+        socket.emit("join-auction", auction._id);
+      });
+
+      socket.on("newBid", (data: any) => {
+        if (data.auctionId === auction._id) {
+          // Update auction state with new highest bidder and amount
+          setAuction((prev: any) => ({
+            ...prev,
+            currentBid: data.amount,
+            highestBidderId: {
+              _id: data.highestBidderId,
+              name: data.highestBidderName,
+            },
+          }));
+          
+          // Add new bid to history
+          setBids((prevBids) => [data.newBid, ...prevBids]);
+          
+          // Update bid amount for the current user if they aren't the one who just bid
+          if (session?.user?.id !== data.highestBidderId) {
+            setBidAmount(data.amount + auction.minIncrement);
+          }
+        }
+      });
+    };
+
+    socketInitializer();
+
+    return () => {
+      if (socket) {
+        socket.disconnect();
+      }
+    };
+  }, [auction._id]);
+
+  // Poll for updates every 30 seconds as a fallback
+  useEffect(() => {
+    const interval = setInterval(fetchUpdatedData, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  const handleAcceptOffer = async () => {
+  const handlePurchase = async () => {
     setSubmitting(true);
-    setError("");
-
     try {
       const res = await fetch(`/api/auctions/${auction._id}/purchase`, {
         method: "POST",
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to initiate purchase");
+      if (res.ok) {
+        router.push("/cart");
+      } else {
+        const data = await res.json();
+        setError(data.error || "Failed to initiate purchase");
       }
-
-      router.push("/cart");
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -114,6 +158,26 @@ export default function AuctionDetailClient({
   const isSeller = session?.user?.id === auction.sellerId?._id;
   const isHighestBidder = session?.user?.id === (auction.highestBidderId?._id || auction.highestBidderId);
   const isEnded = auction.status === "ended" || new Date() > new Date(auction.endTime);
+  const lastBidderId = bids[0]?.userId?._id || bids[0]?.userId;
+  const isLastBidder = session?.user?.id === lastBidderId;
+
+  const handleEndAuction = async () => {
+    if (!confirm("Are you sure you want to end this auction early?")) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/auctions/${auction._id}/end`, { method: "POST" });
+      if (res.ok) {
+        await fetchUpdatedData();
+      } else {
+        const data = await res.json();
+        setError(data.error || "Failed to end auction");
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 lg:gap-12 relative">
@@ -199,6 +263,16 @@ export default function AuctionDetailClient({
               <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', backgroundColor: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.1)' }}>
                 {auction.condition}
               </span>
+              {isEnded ? (
+                <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', padding: '4px 10px', borderRadius: '999px', border: '1px solid rgba(239,68,68,0.2)' }}>
+                  Auction Ended
+                </span>
+              ) : (
+                <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', padding: '4px 10px', borderRadius: '999px', border: '1px solid rgba(16,185,129,0.2)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                  Live Auction
+                </span>
+              )}
             </div>
             <h1 style={{ fontSize: 'clamp(2rem, 3vw, 2.5rem)', fontWeight: 900, lineHeight: 1.15, letterSpacing: '-0.02em', margin: '0 0 8px 0', background: 'linear-gradient(135deg, #fff 60%, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
               {auction.productTitle}
@@ -232,71 +306,99 @@ export default function AuctionDetailClient({
 
           {/* Bidding Actions */}
           {!isEnded ? (
-            <form onSubmit={handlePlaceBid} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              {error && (
-                <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#f87171', padding: '16px', borderRadius: '12px', fontSize: '14px', fontWeight: 600 }}>
-                  ⚠️ {error}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              {isSeller ? (
+                <div style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', padding: '24px', borderRadius: '16px', textAlign: 'center' }}>
+                  <p style={{ color: '#94a3b8', fontWeight: 700, margin: '0 0 16px 0' }}>⛔ You cannot bid on your own auction</p>
+                  <button
+                    type="button"
+                    onClick={handleEndAuction}
+                    disabled={submitting}
+                    style={{ width: '100%', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '16px', borderRadius: '16px', fontWeight: 800, fontSize: '14px', border: '1px solid rgba(239, 68, 68, 0.2)', cursor: 'pointer' }}
+                  >
+                    End Auction Early
+                  </button>
                 </div>
+              ) : isLastBidder ? (
+                <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.1)', padding: '24px', borderRadius: '16px', textAlign: 'center' }}>
+                  <p style={{ color: '#10b981', fontWeight: 800, margin: 0 }}>✅ You currently have the highest bid!</p>
+                  <p style={{ color: '#64748b', fontSize: '13px', marginTop: '8px' }}>Wait for someone else to bid before you can bid again.</p>
+                </div>
+              ) : (
+                <form onSubmit={handlePlaceBid} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  {error && (
+                    <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#f87171', padding: '16px', borderRadius: '12px', fontSize: '14px', fontWeight: 600 }}>
+                      ⚠️ {error}
+                    </div>
+                  )}
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '0 20px', transition: 'all 0.2s' }}>
+                      <span style={{ fontSize: '20px', color: '#94a3b8', fontWeight: 800 }}>₹</span>
+                      <input
+                        type="number"
+                        value={bidAmount}
+                        onChange={(e) => setBidAmount(Number(e.target.value))}
+                        min={minBid}
+                        style={{ width: '100%', backgroundColor: 'transparent', border: 'none', padding: '20px 16px', fontSize: '24px', fontWeight: 900, color: '#f8fafc', outline: 'none' }}
+                        disabled={submitting}
+                      />
+                    </div>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                      {[minBid, Math.ceil(auction.currentBid * 1.1), Math.ceil(auction.currentBid * 1.2)].map((val) => (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => setBidAmount(val)}
+                          style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#e2e8f0', padding: '12px', borderRadius: '12px', fontSize: '14px', fontWeight: 700, border: '1px solid rgba(255,255,255,0.1)', transition: 'background-color 0.2s', cursor: 'pointer' }}
+                        >
+                          + ₹{val - auction.currentBid}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    style={{ 
+                      width: '100%', padding: '20px', borderRadius: '16px', fontWeight: 900, fontSize: '16px', border: 'none', cursor: submitting ? 'not-allowed' : 'pointer',
+                      backgroundColor: '#f59e0b',
+                      color: '#000',
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                      boxShadow: '0 8px 24px rgba(245,158,11,0.25)'
+                    }}
+                  >
+                    {submitting ? "Placing Bid..." : "Place Bid Now"}
+                  </button>
+                </form>
               )}
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '0 20px', transition: 'border-color 0.2s' }}>
-                  <span style={{ fontSize: '20px', color: '#94a3b8', fontWeight: 800 }}>₹</span>
-                  <input
-                    type="number"
-                    value={bidAmount}
-                    onChange={(e) => setBidAmount(Number(e.target.value))}
-                    min={minBid}
-                    style={{ width: '100%', backgroundColor: 'transparent', border: 'none', padding: '20px 16px', fontSize: '24px', fontWeight: 900, color: '#f8fafc', outline: 'none' }}
-                    disabled={submitting || isSeller}
-                  />
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                  {[minBid, Math.ceil(auction.currentBid * 1.1), Math.ceil(auction.currentBid * 1.2)].map((val) => (
-                    <button
-                      key={val}
-                      type="button"
-                      onClick={() => setBidAmount(val)}
-                      style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#e2e8f0', padding: '12px', borderRadius: '12px', fontSize: '14px', fontWeight: 700, border: '1px solid rgba(255,255,255,0.1)', transition: 'background-color 0.2s', cursor: 'pointer' }}
-                    >
-                      + ₹{val - auction.currentBid}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={submitting || isSeller}
-                style={{ 
-                  width: '100%', padding: '20px', borderRadius: '16px', fontWeight: 900, fontSize: '16px', border: 'none', cursor: (submitting || isSeller) ? 'not-allowed' : 'pointer',
-                  backgroundColor: isSeller ? 'rgba(255,255,255,0.05)' : '#f59e0b',
-                  color: isSeller ? '#64748b' : '#000',
-                  transition: 'transform 0.2s, box-shadow 0.2s',
-                  boxShadow: isSeller ? 'none' : '0 8px 24px rgba(245,158,11,0.25)'
-                }}
-              >
-                {submitting ? "Placing Bid..." : isSeller ? "Your Listing" : "Place Bid Now"}
-              </button>
-            </form>
+            </div>
           ) : (
             <div style={{ backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '32px', borderRadius: '24px', textAlign: 'center' }}>
-              <p style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', margin: '0 0 8px 0' }}>Highest Bidder</p>
-              <p style={{ fontSize: '32px', fontWeight: 900, background: 'linear-gradient(135deg, #f59e0b, #d97706)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 }}>
-                {auction.highestBidderId?.name || "No Bids"}
-              </p>
-              
-              {isHighestBidder && (
-                <div style={{ marginTop: '32px', paddingTop: '32px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                  <p style={{ color: '#10b981', fontWeight: 800, marginBottom: '16px' }}>🎉 You won this auction!</p>
+              {isHighestBidder ? (
+                <div style={{ padding: '24px', backgroundColor: 'rgba(16, 185, 129, 0.05)', borderRadius: '20px', border: '1px solid rgba(16, 185, 129, 0.2)', textAlign: 'center' }}>
+                  <div style={{ fontSize: '40px', marginBottom: '16px' }}>🏆</div>
+                  <p style={{ color: '#10b981', fontWeight: 800, marginBottom: '8px', fontSize: '1.25rem' }}>🎉 You won this auction!</p>
+                  <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '20px' }}> Winning Price: <span style={{ color: '#fbbf24', fontWeight: 800 }}>₹{auction.currentBid?.toLocaleString('en-IN')}</span></p>
                   <button 
-                    onClick={handleAcceptOffer}
+                    onClick={handlePurchase}
                     disabled={submitting}
-                    style={{ width: '100%', backgroundColor: '#10b981', color: '#000', padding: '16px', borderRadius: '16px', fontWeight: 900, fontSize: '16px', border: 'none', cursor: 'pointer', boxShadow: '0 8px 24px rgba(16,185,129,0.25)' }}
+                    style={{ width: '100%', backgroundColor: '#10b981', color: '#000', padding: '18px', borderRadius: '16px', fontWeight: 900, fontSize: '16px', border: 'none', cursor: 'pointer', boxShadow: '0 8px 24px rgba(16, 185, 129, 0.25)', transition: 'all 0.2s' }}
+                    onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                    onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                   >
-                    {submitting ? "Processing..." : "Claim & Checkout"}
+                    🛒 Proceed to Buy
                   </button>
+                </div>
+              ) : (
+                <div style={{ padding: '24px', backgroundColor: 'rgba(255, 255, 255, 0.03)', borderRadius: '20px', border: '1px solid rgba(255, 255, 255, 0.08)', textAlign: 'center' }}>
+                  <div style={{ fontSize: '32px', marginBottom: '12px' }}>❌</div>
+                  <p style={{ color: '#94a3b8', fontWeight: 700, margin: 0 }}>Auction Ended</p>
+                  <p style={{ color: '#64748b', fontSize: '13px', marginTop: '8px' }}>
+                    Winner: <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{auction.highestBidderId?.name || "No Bids"}</span>
+                  </p>
                 </div>
               )}
             </div>

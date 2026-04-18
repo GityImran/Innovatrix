@@ -9,12 +9,12 @@ export interface Order {
   totalAmount: number;
   status: OrderStatus;
   createdAt: string;
-  itemModel: "Product" | "RentItem";
+  itemModel: "Product" | "RentItem" | "Auction";
   orderType: "purchase" | "rent";
   paymentLinkId?: string | null;
   razorpayPaymentId?: string | null;
   buyerId: { name: string; email: string };
-  item?: { title: string; category: string };
+  item?: { title: string; category: string; image?: { url: string } };
 }
 
 const STATUS_META: Record<OrderStatus, { color: string; bg: string; border: string; icon: string; label: string }> = {
@@ -278,7 +278,7 @@ export default function OrdersPage() {
                 {/* Product + Buyer */}
                 <div style={{ ...s.col, flex: 2.5, display: "flex", alignItems: "center", gap: "0.75rem" }}>
                   <div style={s.categoryDot}>
-                    {order.item?.category === "Books" ? "📚" : order.item?.category === "Electronics" ? "⚡" : order.item?.category === "Furniture" ? "🪑" : "📦"}
+                    {order.itemModel === "Auction" ? "🔨" : order.item?.category === "Books" ? "📚" : order.item?.category === "Electronics" ? "⚡" : order.item?.category === "Furniture" ? "🪑" : "📦"}
                   </div>
                   <div style={{ minWidth: 0 }}>
                     <p style={s.productName}>{order.item?.title || "Deleted Item"}</p>

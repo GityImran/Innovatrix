@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       let price = 0;
       if (item.itemModel === "Product") price = productDetail.expectedPrice;
       else if (item.itemModel === "RentItem") price = productDetail.pricing?.day || 0;
-      else if (item.itemModel === "Auction") price = productDetail.currentBid;
+      else if (item.itemModel === "Auction") price = productDetail.currentBid || productDetail.startingPrice || 0;
 
       cartTotal += price;
       orderDetails.push({ item, productDetail, price });
@@ -118,6 +118,8 @@ export async function POST(req: NextRequest) {
         await Product.findByIdAndUpdate(actualItemId, { status: "sold" });
       } else if (item.itemModel === "RentItem") {
         await RentItem.findByIdAndUpdate(actualItemId, { status: "rented" });
+      } else if (item.itemModel === "Auction") {
+        await Auction.findByIdAndUpdate(actualItemId, { status: "sold" });
       }
     }
 
