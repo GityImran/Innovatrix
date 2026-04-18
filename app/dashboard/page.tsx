@@ -10,6 +10,9 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import LogoutButton from "@/app/dashboard/LogoutButton";
+import { connectToDatabase } from "@/lib/mongodb";
+import Order from "@/models/Order";
+import Product from "@/models/Product";
 
 export const metadata = {
   title: "Dashboard | CircularCampus",
@@ -30,6 +33,21 @@ export default async function DashboardPage() {
     email: string;
     id: string;
   };
+
+  await connectToDatabase();
+  const productCount = await Product.countDocuments({ sellerId: id });
+  const purchasesCount = await Order.countDocuments({ buyerId: id });
+  
+  const purchases = await Order.find({ buyerId: id })
+    .populate("itemId", "title")
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const receivedOrders = await Order.find({ sellerId: id })
+    .populate("itemId", "title expectedPrice")
+    .populate("buyerId", "name email")
+    .sort({ createdAt: -1 })
+    .lean();
 
   return (
     <div style={styles.page}>
@@ -77,10 +95,61 @@ export default async function DashboardPage() {
 
         {/* Stats Row */}
         <div style={styles.statsRow}>
-          <StatCard icon="📦" label="My Listings" value="0" />
-          <StatCard icon="🛒" label="Purchases" value="0" />
-          <StatCard icon="⭐" label="Reviews" value="0" />
+          <StatCard icon="📦" label="My Listings" value={productCount.toString()} />
+          <StatCard icon="🛒" label="Purchases" value={purchasesCount.toString()} />
+          <StatCard icon="🔔" label="Orders Received" value={receivedOrders.length.toString()} />
         </div>
+
+        {/* Orders Received */}
+        {receivedOrders.length > 0 && (
+          <div style={styles.infoCard}>
+            <h2 style={styles.cardTitle}>Sales & Orders Received</h2>
+            <div style={styles.infoGrid}>
+              {receivedOrders.map((order: any) => (
+                <div key={order._id.toString()} style={{ ...styles.infoRow, flexDirection: "column", alignItems: "flex-start", gap: "8px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
+                    <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "#f8fafc" }}>
+                      {order.itemId?.title || "Unknown Item"}
+                    </span>
+                    <span style={{ fontSize: "0.95rem", fontWeight: 800, color: "#f59e0b" }}>
+                      ₹{order.totalAmount}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "0.8rem", color: "#94a3b8", display: "flex", justifyContent: "space-between", width: "100%" }}>
+                    <span>Buyer: {order.buyerId?.name} ({order.buyerId?.email})</span>
+                    <span style={{ textTransform: "capitalize", color: order.status === "completed" ? "#10b981" : "#818cf8" }}>
+                      {order.status} • {order.paymentMethod}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* My Purchases */}
+        {purchases.length > 0 && (
+          <div style={styles.infoCard}>
+            <h2 style={styles.cardTitle}>My Purchases</h2>
+            <div style={styles.infoGrid}>
+              {purchases.map((order: any) => (
+                <div key={order._id.toString()} style={{ ...styles.infoRow, justifyContent: "space-between" }}>
+                  <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "#e2e8f0" }}>
+                    {order.itemId?.title || "Unknown Item"}
+                  </span>
+                  <div style={{ textAlign: "right" }}>
+                    <span style={{ fontSize: "0.9rem", fontWeight: 800, color: "#34d399", display: "block" }}>
+                      ₹{order.totalAmount}
+                    </span>
+                    <span style={{ fontSize: "0.75rem", color: "#64748b", textTransform: "capitalize" }}>
+                      {order.status} • {order.paymentMethod}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* JWT Info Banner */}
         <div style={styles.jwtBanner}>

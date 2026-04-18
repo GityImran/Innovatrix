@@ -24,10 +24,8 @@ export async function POST(req: NextRequest) {
 
     await connectToDatabase();
 
-    // 1. Get all cart items for the user (with full product details)
-    const cartItems = await CartItem.find({ userId: session.user.id }).populate({
-      path: "itemId",
-    });
+    // 1. Get all cart items for the user
+    const cartItems = await CartItem.find({ userId: session.user.id });
 
     if (cartItems.length === 0) {
       return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
@@ -37,7 +35,13 @@ export async function POST(req: NextRequest) {
 
     // 2. Create an order for each item and mark the item as sold/rented
     for (const item of cartItems) {
-      const productDetail = item.itemId as any;
+      let productDetail: any = null;
+      if (item.itemModel === "Product") {
+        productDetail = await Product.findById(item.itemId);
+      } else if (item.itemModel === "RentItem") {
+        productDetail = await RentItem.findById(item.itemId);
+      }
+
       if (!productDetail) continue;
 
       const price =
@@ -45,11 +49,15 @@ export async function POST(req: NextRequest) {
           ? productDetail.expectedPrice
           : productDetail.pricing?.day || 0;
 
+      // Ensure we extract proper ObjectIds
+      const actualItemId = productDetail._id || item.itemId;
+      const actualSellerId = productDetail.sellerId;
+
       // Create the order with paymentMethod persisted
       const order = await Order.create({
         buyerId: session.user.id,
-        sellerId: productDetail.sellerId,
-        itemId: item.itemId,
+        sellerId: actualSellerId,
+        itemId: actualItemId,
         itemModel: item.itemModel,
         orderType: item.itemModel === "Product" ? "purchase" : "rent",
         totalAmount: price,
@@ -60,9 +68,9 @@ export async function POST(req: NextRequest) {
 
       // ─── KEY CHANGE: Mark item as sold/rented so it disappears from search ───
       if (item.itemModel === "Product") {
-        await Product.findByIdAndUpdate(item.itemId, { status: "sold" });
+        await Product.findByIdAndUpdate(actualItemId, { status: "sold" });
       } else if (item.itemModel === "RentItem") {
-        await RentItem.findByIdAndUpdate(item.itemId, { status: "rented" });
+        await RentItem.findByIdAndUpdate(actualItemId, { status: "rented" });
       }
     }
 

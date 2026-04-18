@@ -1,54 +1,55 @@
-"use client";
-
-import React, { useEffect, useState } from "react";
-
-interface EarningsData {
-  total: number;
-  orderCount: number;
-  monthly: {
-    _id: { month: number; year: number };
-    amount: number;
-  }[];
-}
+import React from "react";
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { connectToDatabase } from "@/lib/mongodb";
+import Order from "@/models/Order";
+import mongoose from "mongoose";
 
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-export default function EarningsPage() {
-  const [data, setData] = useState<EarningsData | null>(null);
-  const [loading, setLoading] = useState(true);
+export default async function EarningsPage() {
+  const session = await auth();
+  if (!session?.user) {
+    redirect("/login");
+  }
 
-  useEffect(() => {
-    const fetchEarnings = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch("/api/seller/earnings");
-        if (res.ok) setData(await res.json());
-      } catch (err) {
-        console.error("Failed to fetch earnings:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchEarnings();
-  }, []);
+  await connectToDatabase();
+  const sellerId = new mongoose.Types.ObjectId(session.user.id);
 
-  const monthlyChartData =
-    data?.monthly.map((m) => ({
-      label: MONTH_NAMES[m._id.month - 1],
-      amount: m.amount,
-    })) ?? [];
+  // 1. Total Earnings
+  const totalEarningsData = await Order.aggregate([
+    { $match: { sellerId, status: "completed" } },
+    { $group: { _id: null, total: { $sum: "$totalAmount" }, count: { $sum: 1 } } }
+  ]);
+
+  const total = totalEarningsData[0]?.total || 0;
+  const orderCount = totalEarningsData[0]?.count || 0;
+
+  // 2. Monthly Earnings (Last 6 Months)
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+  const monthlyEarnings = await Order.aggregate([
+    { $match: { sellerId, status: "completed", createdAt: { $gte: sixMonthsAgo } } },
+    { $group: { _id: { month: { $month: "$createdAt" }, year: { $year: "$createdAt" } }, amount: { $sum: "$totalAmount" } } },
+    { $sort: { "_id.year": 1, "_id.month": 1 } }
+  ]);
+
+  // 3. Recent Transactions
+  const recentTransactions = await Order.find({ sellerId, status: "completed" })
+    .sort({ createdAt: -1 })
+    .limit(5)
+    .populate("itemId", "title")
+    .lean();
+
+  const monthlyChartData = monthlyEarnings.map((m: any) => ({
+    label: MONTH_NAMES[m._id.month - 1],
+    amount: m.amount,
+  }));
 
   const maxAmount = Math.max(...monthlyChartData.map((d) => d.amount), 1);
-  const isEmpty   = monthlyChartData.length === 0;
-  const avgOrderValue = data && data.orderCount > 0 ? data.total / data.orderCount : 0;
-
-  if (loading) {
-    return (
-      <div style={{ display: "flex", justifyContent: "center", padding: "4rem" }}>
-        <p style={{ color: "#64748b" }}>Loading earnings…</p>
-      </div>
-    );
-  }
+  const isEmpty = monthlyChartData.length === 0;
+  const avgOrderValue = orderCount > 0 ? total / orderCount : 0;
 
   return (
     <div style={s.page}>
@@ -68,8 +69,8 @@ export default function EarningsPage() {
           </div>
           <div>
             <p style={s.heroLabel}>Total Earnings</p>
-            <p style={s.heroValue}>₹{(data?.total ?? 0).toLocaleString("en-IN")}</p>
-            <p style={s.heroHint}>Across all {data?.orderCount ?? 0} completed orders</p>
+            <p style={s.heroValue}>₹{total.toLocaleString("en-IN")}</p>
+            <p style={s.heroHint}>Across all {orderCount} completed orders</p>
           </div>
         </div>
 
@@ -78,7 +79,7 @@ export default function EarningsPage() {
           <div style={{ ...s.statIconWrap, backgroundColor: "rgba(59,130,246,0.12)", color: "#3b82f6" }}>✅</div>
           <div>
             <p style={s.statLabel}>Orders Completed</p>
-            <p style={s.statValue}>{data?.orderCount ?? 0}</p>
+            <p style={s.statValue}>{orderCount}</p>
             <span style={s.noDataHint}>Lifetime</span>
           </div>
         </div>
@@ -144,7 +145,7 @@ export default function EarningsPage() {
         </div>
       </div>
 
-      {/* ── Recent Transactions placeholder ── */}
+      {/* ── Recent Transactions ── */}
       <div style={s.transCard}>
         <div style={s.chartHeader}>
           <div>
@@ -152,11 +153,29 @@ export default function EarningsPage() {
             <p style={s.chartSubtitle}>Payments from completed orders</p>
           </div>
         </div>
-        <div style={s.transEmpty}>
-          <div style={{ fontSize: "2.5rem", marginBottom: "0.6rem" }}>🧾</div>
-          <p style={s.chartEmptyTitle}>No transactions yet</p>
-          <p style={s.chartEmptyDesc}>Completed order payments will be listed here.</p>
-        </div>
+        {recentTransactions.length === 0 ? (
+          <div style={s.transEmpty}>
+            <div style={{ fontSize: "2.5rem", marginBottom: "0.6rem" }}>🧾</div>
+            <p style={s.chartEmptyTitle}>No transactions yet</p>
+            <p style={s.chartEmptyDesc}>Completed order payments will be listed here.</p>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            {recentTransactions.map((tx: any) => (
+              <div key={tx._id.toString()} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1rem", backgroundColor: "#0a0a0a", borderRadius: "8px", border: "1px solid #1a1a1a" }}>
+                <div>
+                  <p style={{ margin: 0, fontSize: "0.9rem", color: "#f8fafc", fontWeight: 600 }}>{tx.itemId?.title || "Unknown Item"}</p>
+                  <p style={{ margin: 0, fontSize: "0.75rem", color: "#64748b", marginTop: "0.2rem" }}>
+                    {new Date(tx.createdAt).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })} • {tx.paymentMethod.toUpperCase()}
+                  </p>
+                </div>
+                <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#10b981" }}>
+                  +₹{tx.totalAmount.toLocaleString("en-IN")}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── Payout Info banner ── */}

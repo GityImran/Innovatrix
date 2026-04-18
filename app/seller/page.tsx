@@ -3,18 +3,13 @@
  * Seller Dashboard Overview — stats, quick links, recent activity placeholder.
  */
 
-"use client";
-
 import React from "react";
-import { useSession } from "next-auth/react";
+import { auth } from "@/lib/auth";
 import Link from "next/link";
-
-const STATS = [
-  { label: "Total Earnings", value: "₹0", icon: "💰", color: "#f59e0b", trend: "+0%" },
-  { label: "Orders This Week", value: "0", icon: "🛒", color: "#10b981", trend: "+0" },
-  { label: "Total Products", value: "0", icon: "📦", color: "#3b82f6", trend: "Listed" },
-  { label: "Pending Orders", value: "0", icon: "⏳", color: "#ef4444", trend: "Needs action" },
-];
+import { redirect } from "next/navigation";
+import { connectToDatabase } from "@/lib/mongodb";
+import Product from "@/models/Product";
+import Order from "@/models/Order";
 
 const QUICK_LINKS = [
   { href: "/seller/add-product", icon: "➕", label: "Add Product", desc: "List a new item for sale" },
@@ -23,9 +18,46 @@ const QUICK_LINKS = [
   { href: "/seller/earnings", icon: "💰", label: "Earnings", desc: "See your revenue summary" },
 ];
 
-export default function SellerDashboardPage() {
-  const { data: session } = useSession();
-  const firstName = session?.user?.name?.split(" ")[0] ?? "Seller";
+export default async function SellerDashboardPage() {
+  const session = await auth();
+  if (!session?.user) {
+    redirect("/login");
+  }
+
+  await connectToDatabase();
+  const sellerId = session.user.id;
+  const firstName = session.user.name?.split(" ")[0] ?? "Seller";
+
+  const [totalProducts, pendingOrders, allOrders, recentOrders, topProduct] = await Promise.all([
+    Product.countDocuments({ sellerId }),
+    Order.countDocuments({ sellerId, status: "pending" }),
+    Order.find({ sellerId }).lean(),
+    Order.find({ sellerId }).sort({ createdAt: -1 }).limit(3).populate("itemId", "title").populate("buyerId", "name").lean(),
+    Product.findOne({ sellerId }).sort({ expectedPrice: -1 }).lean()
+  ]);
+
+  const totalEarnings = allOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  const totalOrders = allOrders.length;
+
+  // Simple weekly order distribution chart
+  const weeklyOrders = [0, 0, 0, 0, 0, 0, 0];
+  const now = new Date();
+  allOrders.forEach((o) => {
+    const d = new Date(o.createdAt);
+    const diffTime = Math.abs(now.getTime() - d.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    if (diffDays <= 7) {
+      const dayIndex = (d.getDay() + 6) % 7; // Mon=0, Sun=6
+      weeklyOrders[dayIndex]++;
+    }
+  });
+
+  const STATS = [
+    { label: "Total Earnings", value: `₹${totalEarnings.toLocaleString("en-IN")}`, icon: "💰", color: "#f59e0b", trend: "Lifetime" },
+    { label: "Total Orders", value: totalOrders.toString(), icon: "🛒", color: "#10b981", trend: "All time" },
+    { label: "Total Products", value: totalProducts.toString(), icon: "📦", color: "#3b82f6", trend: "Listed" },
+    { label: "Pending Orders", value: pendingOrders.toString(), icon: "⏳", color: "#ef4444", trend: "Needs action" },
+  ];
 
   return (
     <div style={s.page}>
@@ -61,19 +93,31 @@ export default function SellerDashboardPage() {
         ))}
       </div>
 
-      {/* Analytics Row: Top Product + Mini Chart Placeholder */}
+      {/* Analytics Row: Top Product + Mini Chart */}
       <div style={s.analyticsRow}>
         {/* Top Product Card */}
         <div style={s.analyticsCard}>
           <div style={s.analyticsHeader}>
-            <span style={s.analyticsTitle}>🏆 Top Product</span>
-            <span style={s.analyticsBadge}>Best Seller</span>
+            <span style={s.analyticsTitle}>🏆 Highest Valued Product</span>
+            <span style={s.analyticsBadge}>Premium</span>
           </div>
-          <div style={s.topProductEmpty}>
-            <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>📦</div>
-            <p style={s.analyticsEmptyText}>No products listed yet</p>
-            <p style={s.analyticsEmptyHint}>Your top-selling item will appear here</p>
-          </div>
+          {topProduct ? (
+            <div style={{ padding: "1rem 0", display: "flex", alignItems: "center", gap: "1rem" }}>
+              <div style={{ width: "60px", height: "60px", borderRadius: "10px", backgroundColor: "#1f1f1f", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem" }}>
+                {topProduct.image?.url ? <img src={topProduct.image.url} alt="Top Product" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "📦"}
+              </div>
+              <div>
+                <p style={{ margin: 0, fontSize: "0.95rem", fontWeight: 700, color: "#f8fafc" }}>{topProduct.title}</p>
+                <p style={{ margin: "0.2rem 0 0", fontSize: "1.1rem", fontWeight: 800, color: "#f59e0b" }}>₹{topProduct.expectedPrice.toLocaleString("en-IN")}</p>
+              </div>
+            </div>
+          ) : (
+            <div style={s.topProductEmpty}>
+              <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>📦</div>
+              <p style={s.analyticsEmptyText}>No products listed yet</p>
+              <p style={s.analyticsEmptyHint}>Your highest valued item will appear here</p>
+            </div>
+          )}
         </div>
 
         {/* Orders This Week Mini Chart */}
@@ -85,12 +129,12 @@ export default function SellerDashboardPage() {
           <div style={s.chartPlaceholder}>
             {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day, i) => (
               <div key={day} style={s.barGroup}>
-                <div style={{ ...s.bar, height: `${[0,0,0,0,0,0,0][i] * 1.2 + 4}px` }} />
+                <div style={{ ...s.bar, height: `${weeklyOrders[i] * 5 + 4}px`, backgroundColor: weeklyOrders[i] > 0 ? "#f59e0b" : "rgba(245,158,11,0.25)" }} />
                 <span style={s.barLabel}>{day}</span>
               </div>
             ))}
           </div>
-          <p style={s.analyticsFooter}>0 orders this week</p>
+          <p style={s.analyticsFooter}>{weeklyOrders.reduce((a, b) => a + b, 0)} orders this week</p>
         </div>
       </div>
 
@@ -111,19 +155,45 @@ export default function SellerDashboardPage() {
         </div>
       </section>
 
-      {/* Recent Activity Placeholder */}
+      {/* Recent Activity */}
       <section style={s.section}>
         <h2 style={s.sectionTitle}>Recent Activity</h2>
-        <div style={s.emptyCard}>
-          <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>📭</div>
-          <p style={s.emptyTitle}>No activity yet</p>
-          <p style={s.emptyDesc}>
-            Once you list your first item, your activity will show up here.
-          </p>
-          <Link href="/seller/add-product" style={s.emptyBtn}>
-            List Your First Item
-          </Link>
-        </div>
+        {recentOrders.length > 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            {recentOrders.map((order: any) => (
+              <div key={order._id.toString()} style={{ backgroundColor: "#121212", border: "1px solid #1f1f1f", borderRadius: "12px", padding: "1rem 1.25rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                  <div style={{ width: "40px", height: "40px", borderRadius: "50%", backgroundColor: "rgba(59,130,246,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", color: "#3b82f6" }}>
+                    🛒
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 700, color: "#f8fafc" }}>
+                      New order for {order.itemId?.title || "an item"}
+                    </p>
+                    <p style={{ margin: "0.15rem 0 0", fontSize: "0.75rem", color: "#64748b" }}>
+                      Placed by {order.buyerId?.name || "a user"} • {new Date(order.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <span style={{ fontSize: "1rem", fontWeight: 800, color: "#10b981", display: "block" }}>+₹{order.totalAmount}</span>
+                  <span style={{ fontSize: "0.7rem", color: order.status === "completed" ? "#10b981" : "#f59e0b", fontWeight: 700, textTransform: "uppercase" }}>{order.status}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={s.emptyCard}>
+            <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>📭</div>
+            <p style={s.emptyTitle}>No activity yet</p>
+            <p style={s.emptyDesc}>
+              Once you list your first item and receive orders, your activity will show up here.
+            </p>
+            <Link href="/seller/add-product" style={s.emptyBtn}>
+              List Your First Item
+            </Link>
+          </div>
+        )}
       </section>
     </div>
   );
