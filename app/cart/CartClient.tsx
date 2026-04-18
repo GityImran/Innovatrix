@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Trash2, ShoppingBag, ArrowRight, CreditCard, CheckCircle, ChevronRight, Banknote, Wallet, Smartphone } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Trash2, ShoppingBag, ArrowRight, CreditCard, CheckCircle, ChevronRight, Banknote, Wallet, Smartphone, ShieldCheck, Tag } from "lucide-react";
 
 type CartItem = {
   _id: string;
@@ -20,6 +20,8 @@ type CartItem = {
     category?: string;
     sellerDomain?: string;
   } | null;
+  isNegotiated?: boolean;
+  negotiatedPrice?: number;
 };
 
 type CheckoutStep = "cart" | "payment" | "review" | "success";
@@ -40,16 +42,49 @@ const globalStyles = `
   .pay-card:hover{border-color:rgba(245,158,11,0.4) !important;background:rgba(245,158,11,0.04) !important}
 `;
 
-export default function CartClient() {
+function CartContent() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [step, setStep] = useState<CheckoutStep>("cart");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(null);
   const [placedOrders, setPlacedOrders] = useState<any[]>([]);
+  const [negotiatedOrder, setNegotiatedOrder] = useState<any>(null);
+  
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const orderId = searchParams.get("orderId");
 
-  useEffect(() => { fetchCart(); }, []);
+  useEffect(() => { 
+    if (orderId) {
+      fetchNegotiatedOrder(orderId);
+    } else {
+      fetchCart(); 
+    }
+  }, [orderId]);
+
+  const fetchNegotiatedOrder = async (id: string) => {
+    try {
+      const res = await fetch(`/api/orders/${id}`);
+      if (res.ok) {
+        const order = await res.json();
+        setNegotiatedOrder(order);
+        // Create a virtual cart item for the negotiated order
+        const virtualItem: CartItem = {
+          _id: `neg-${order._id}`,
+          itemModel: order.itemModel,
+          itemId: order.itemId,
+          isNegotiated: true,
+          negotiatedPrice: order.totalAmount
+        };
+        setItems([virtualItem]);
+      }
+    } catch (err) {
+      console.error("Failed to fetch negotiated order", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   /* ── Backend (unchanged) ────────────────────── */
   const fetchCart = async () => {
@@ -61,6 +96,12 @@ export default function CartClient() {
   };
 
   const removeItem = async (cartItemId: string) => {
+    if (cartItemId.startsWith('neg-')) {
+      // For negotiated orders, just clear it from view and redirect
+      setItems([]);
+      router.push('/cart');
+      return;
+    }
     try {
       const res = await fetch(`/api/cart?id=${cartItemId}`, { method: "DELETE" });
       if (res.ok) setItems(items.filter((item) => item._id !== cartItemId));
@@ -71,14 +112,17 @@ export default function CartClient() {
     if (items.length === 0) return;
     setCheckoutLoading(true);
     try {
-      const res = await fetch("/api/cart/checkout", {
+      // For simplicity, let's assume we use the regular checkout if it's cart, 
+      // and for negotiated order we might just mark it as confirmed.
+      const res = await fetch(negotiatedOrder ? `/api/orders/${negotiatedOrder._id}/confirm` : "/api/cart/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ paymentMethod: paymentMethod ?? "cod" }),
       });
+
       if (res.ok) {
         const data = await res.json();
-        setPlacedOrders(data.orders || []);
+        setPlacedOrders(negotiatedOrder ? [negotiatedOrder] : (data.orders || []));
         setStep("success");
       } else {
         const d = await res.json();
@@ -92,7 +136,9 @@ export default function CartClient() {
 
   const subtotal = items.reduce((acc, item) => {
     let price = 0;
-    if (item.itemModel === "Product") {
+    if (item.isNegotiated && item.negotiatedPrice) {
+      price = item.negotiatedPrice;
+    } else if (item.itemModel === "Product") {
       price = item.itemId?.expectedPrice || 0;
     } else if (item.itemModel === "RentItem") {
       price = item.itemId?.pricing?.day || 0;
@@ -378,19 +424,23 @@ export default function CartClient() {
               const isRent = item.itemModel === "RentItem";
               const isAuction = item.itemModel === "Auction";
 
-              let price = 0;
+              let price = item.isNegotiated ? (item.negotiatedPrice || 0) : 0;
               let title = product?.title || "Unknown Item";
               let imageUrl = product?.image?.url;
               let category = product?.category;
+              let detailUrl = `/product/${product?._id}`;
 
-              if (isSell) {
-                price = product?.expectedPrice || 0;
-              } else if (isRent) {
-                price = product?.pricing?.day || 0;
-              } else if (isAuction) {
-                price = product?.currentBid || 0;
-                title = product?.productTitle || "Won Auction";
-                imageUrl = product?.images && product.images.length > 0 ? product.images[0] : undefined;
+              if (!item.isNegotiated) {
+                if (isSell) {
+                  price = product?.expectedPrice || 0;
+                } else if (isRent) {
+                  price = product?.pricing?.day || 0;
+                } else if (isAuction) {
+                  price = product?.currentBid || 0;
+                  title = product?.productTitle || "Won Auction";
+                  imageUrl = product?.images && product.images.length > 0 ? product.images[0] : undefined;
+                  detailUrl = `/auction/${product?._id}`;
+                }
               }
 
               return (
@@ -509,21 +559,23 @@ export default function CartClient() {
                 const isRent = item.itemModel === "RentItem";
                 const isAuction = item.itemModel === "Auction";
 
-                let price = 0;
+                let price = item.isNegotiated ? (item.negotiatedPrice || 0) : 0;
                 let title = product?.title || "Unknown Item";
                 let imageUrl = product?.image?.url;
                 let category = product?.category;
                 let detailUrl = `/product/${product?._id}`;
 
-                if (isSell) {
-                  price = product?.expectedPrice || 0;
-                } else if (isRent) {
-                  price = product?.pricing?.day || 0;
-                } else if (isAuction) {
-                  price = product?.currentBid || 0;
-                  title = product?.productTitle || "Won Auction";
-                  imageUrl = product?.images && product.images.length > 0 ? product.images[0] : undefined;
-                  detailUrl = `/auction/${product?._id}`;
+                if (!item.isNegotiated) {
+                  if (isSell) {
+                    price = product?.expectedPrice || 0;
+                  } else if (isRent) {
+                    price = product?.pricing?.day || 0;
+                  } else if (isAuction) {
+                    price = product?.currentBid || 0;
+                    title = product?.productTitle || "Won Auction";
+                    imageUrl = product?.images && product.images.length > 0 ? product.images[0] : undefined;
+                    detailUrl = `/auction/${product?._id}`;
+                  }
                 }
 
                 return (
@@ -547,9 +599,33 @@ export default function CartClient() {
                               {title}
                             </h3>
                           </Link>
+
+                          {item.isNegotiated && (
+                            <div style={{ 
+                              display: "inline-flex", 
+                              alignItems: "center", 
+                              gap: "4px", 
+                              marginTop: "6px",
+                              padding: "2px 8px",
+                              borderRadius: "4px",
+                              backgroundColor: "rgba(16,185,129,0.1)",
+                              border: "1px solid rgba(16,185,129,0.2)"
+                            }}>
+                              <ShieldCheck size={12} color="#10b981" />
+                              <span style={{ fontSize: "10px", fontWeight: 700, color: "#34d399", textTransform: "uppercase" }}>
+                                Negotiated Price Locked
+                              </span>
+                            </div>
+                          )}
+
                           <div style={{ display: "flex", alignItems: "baseline", gap: "4px", marginTop: "10px" }}>
                             <span style={{ fontSize: "1.25rem", fontWeight: 900, color: "#f59e0b", letterSpacing: "-0.02em" }}>₹{price?.toLocaleString("en-IN")}</span>
                             {isRent && <span style={{ fontSize: "12px", color: "#475569" }}>/day</span>}
+                            {item.isNegotiated && product?.expectedPrice && (
+                              <span style={{ fontSize: "12px", color: "#475569", textDecoration: "line-through", marginLeft: "8px" }}>
+                                ₹{product.expectedPrice.toLocaleString("en-IN")}
+                              </span>
+                            )}
                           </div>
                         </div>
                         <button className="remove-btn" onClick={() => removeItem(item._id)} style={{ flexShrink: 0, color: "#334155", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "10px", padding: "8px", display: "flex", alignItems: "center", cursor: "pointer", transition: "color 0.2s, background 0.2s" }} title="Remove">
@@ -609,5 +685,22 @@ export default function CartClient() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function CartClient() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: "100vh", backgroundColor: "#080808", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <style>{globalStyles}</style>
+        <div style={{ maxWidth: "900px", width: "100%", padding: "48px 24px" }}>
+          {[1, 2, 3].map(i => (
+            <div key={i} className="shimmer" style={{ height: "104px", borderRadius: "18px", marginBottom: "14px" }} />
+          ))}
+        </div>
+      </div>
+    }>
+      <CartContent />
+    </Suspense>
   );
 }

@@ -18,6 +18,7 @@ export interface IOrder extends Document {
   paymentLinkId: string | null;
   /** Razorpay Payment ID — set when the webhook confirms payment */
   razorpayPaymentId: string | null;
+  isNegotiated: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -53,6 +54,7 @@ const OrderSchema = new Schema<IOrder>(
     paymentLinkId: { type: String, default: null },
     /** Razorpay Payment ID stored when webhook confirms payment */
     razorpayPaymentId: { type: String, default: null },
+    isNegotiated: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

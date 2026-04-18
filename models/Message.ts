@@ -8,6 +8,9 @@ export interface IMessage extends Document {
   offerData?: {
     price: number;
     status: "pending" | "accepted" | "rejected" | "countered";
+    productId?: mongoose.Types.ObjectId;
+    buyerId?: mongoose.Types.ObjectId;
+    sellerId?: mongoose.Types.ObjectId;
   };
   isRead: boolean;
   createdAt: Date;
@@ -40,6 +43,9 @@ const MessageSchema = new Schema<IMessage>(
         type: String,
         enum: ["pending", "accepted", "rejected", "countered"],
       },
+      productId: { type: Schema.Types.ObjectId, ref: "Product" },
+      buyerId: { type: Schema.Types.ObjectId, ref: "User" },
+      sellerId: { type: Schema.Types.ObjectId, ref: "User" },
     },
     isRead: {
       type: Boolean,

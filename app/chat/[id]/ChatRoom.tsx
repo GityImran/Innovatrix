@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { Send, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import styles from '../Chat.module.css';
 
 interface MessageData {
@@ -15,6 +16,9 @@ interface MessageData {
   offerData?: {
     price: number;
     status: "pending" | "accepted" | "rejected" | "countered";
+    productId?: string;
+    buyerId?: string;
+    sellerId?: string;
   };
   createdAt: string;
 }
@@ -27,6 +31,7 @@ interface ChatRoomProps {
   itemCategory: string;
   itemCondition: string;
   itemPrice: number;
+  sellerId: string;
 }
 
 export default function ChatRoom({
@@ -37,7 +42,12 @@ export default function ChatRoom({
   itemCategory,
   itemCondition,
   itemPrice,
+  sellerId,
 }: ChatRoomProps) {
+  const router = useRouter();
+  const isSeller = currentUserId === sellerId;
+  const isBuyer = currentUserId !== sellerId;
+
   const [messages, setMessages] = useState<MessageData[]>([]);
   const [input, setInput] = useState('');
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -190,6 +200,29 @@ export default function ChatRoom({
     }
   };
 
+  const handleProceedToBuy = async (msg: MessageData) => {
+    try {
+      const res = await fetch("/api/orders/create-from-negotiation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: msg.offerData?.productId || "",
+          price: msg.offerData?.price || 0,
+          sellerId: sellerId,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.orderId) {
+        router.push(`/cart?orderId=${data.orderId}`);
+      } else {
+        alert(data.error || "Failed to initiate purchase");
+      }
+    } catch (err) {
+      console.error("Failed to proceed to buy:", err);
+    }
+  };
+
   const getInsightText = (offerPrice: number) => {
     const listingPrice = itemPrice;
     if (!listingPrice) return null;
@@ -311,6 +344,51 @@ export default function ChatRoom({
                     {status}
                   </span>
                 </div>
+
+                {/* Proceed to Buy button for buyers when offer is accepted */}
+                {isBuyer && status === "accepted" && (
+                  <button 
+                    onClick={() => handleProceedToBuy(msg)}
+                    style={{
+                      width: "100%",
+                      padding: "0.75rem",
+                      borderRadius: "10px",
+                      border: "none",
+                      background: "linear-gradient(135deg, #10b981, #059669)",
+                      color: "#fff",
+                      fontWeight: 800,
+                      fontSize: "0.9rem",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "0.5rem",
+                      marginTop: "0.5rem",
+                      boxShadow: "0 4px 12px rgba(16,185,129,0.3)",
+                      transition: "transform 0.2s, box-shadow 0.2s"
+                    }}
+                    onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(16,185,129,0.4)'; }}
+                    onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(16,185,129,0.3)'; }}
+                  >
+                    🛒 Proceed to Buy
+                  </button>
+                )}
+
+                {/* Status indicators for seller when offer is accepted */}
+                {isSeller && status === "accepted" && (
+                  <div style={{ 
+                    padding: "0.5rem", 
+                    borderRadius: "8px", 
+                    backgroundColor: "rgba(16,185,129,0.1)", 
+                    border: "1px solid rgba(16,185,129,0.2)",
+                    color: "#34d399",
+                    fontSize: "0.85rem",
+                    fontWeight: 700,
+                    textAlign: "center"
+                  }}>
+                    🎉 Deal Finalized! Awaiting Buyer Checkout
+                  </div>
+                )}
 
                 {!isOwn && (status === "pending" || status === "countered") && (
                   <div style={{ display: "flex", gap: "0.5rem" }}>

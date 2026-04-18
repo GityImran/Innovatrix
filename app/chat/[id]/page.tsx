@@ -60,6 +60,7 @@ export default async function ChatPage({ params }: ChatPageProps) {
       itemCategory={itemCategory}
       itemCondition={itemCondition}
       itemPrice={itemPrice}
+      sellerId={sellerId}
     />
   );
 }

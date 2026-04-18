@@ -4,18 +4,49 @@ import Order from "@/models/Order";
 import { auth } from "@/lib/auth";
 
 /**
+ * GET /api/orders/:id
+ * Fetches order details for checkout/cart.
+ */
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const session = await auth();
+
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    await connectToDatabase();
+
+    const order = await Order.findById(id)
+      .populate("itemId")
+      .populate("sellerId", "name email");
+
+    if (!order) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    // Only buyer or seller can view order details
+    if (
+      session.user.id !== order.buyerId.toString() &&
+      session.user.id !== order.sellerId.toString()
+    ) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    return NextResponse.json(order);
+  } catch (error: any) {
+    console.error("GET Order Error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+/**
  * PATCH /api/orders/:id
- *
  * Generic order update — scoped to cancellation only.
- *
- * The full Razorpay COD → UPI on delivery flow uses dedicated sub-routes:
- *   PATCH /api/orders/:id/start-delivery        → pending → out_for_delivery
- *   POST  /api/orders/:id/generate-payment-link → creates Razorpay payment link
- *   POST  /api/webhook/razorpay                 → sets status "paid" (Razorpay only)
- *   PATCH /api/orders/:id/complete              → paid → completed (marks item sold)
- *
- * Only "cancelled" is accepted here to prevent any client from bypassing
- * the payment verification gate.
  */
 const ALLOWED_STATUSES = ["cancelled"] as const;
 type AllowedStatus = (typeof ALLOWED_STATUSES)[number];

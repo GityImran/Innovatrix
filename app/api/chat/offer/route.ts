@@ -46,6 +46,11 @@ export async function POST(req: NextRequest) {
       actualConvId = conv._id;
     }
 
+    const convo = await Conversation.findById(actualConvId);
+    if (!convo) {
+      return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+    }
+
     const newMessage = await Message.create({
       conversationId: actualConvId,
       senderId: session.user.id,
@@ -53,6 +58,9 @@ export async function POST(req: NextRequest) {
       offerData: {
         price,
         status: type === "offer" ? "pending" : "countered",
+        productId: convo.itemId,
+        buyerId: convo.buyerId,
+        sellerId: convo.sellerId,
       },
       isRead: false,
     });
@@ -101,6 +109,7 @@ export async function PATCH(req: NextRequest) {
     let responseData: any = { message };
 
     if (status === "countered" && counterPrice) {
+      const convo = await Conversation.findById(message.conversationId);
       // Create a counter-offer message
       const counterMsg = await Message.create({
         conversationId: message.conversationId,
@@ -109,6 +118,9 @@ export async function PATCH(req: NextRequest) {
         offerData: {
           price: counterPrice,
           status: "countered",
+          productId: convo?.itemId,
+          buyerId: convo?.buyerId,
+          sellerId: convo?.sellerId,
         },
         isRead: false,
       });
