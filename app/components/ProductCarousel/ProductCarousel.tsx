@@ -1,8 +1,9 @@
 import React from 'react';
 import Link from 'next/link';
 import styles from './ProductCarousel.module.css';
+import AddToCartButton from '../AddToCartButton/AddToCartButton';
 
-export default function ProductCarousel({ title, products, currentUserId }: { title: string, products: any[], currentUserId?: string }) {
+export default function ProductCarousel({ title, products, currentUserId, itemModel = "Product" }: { title: string, products: any[], currentUserId?: string, itemModel?: "Product" | "RentItem" | "Auction" }) {
   return (
     <section className={styles.section}>
       <div className="container">
@@ -17,6 +18,10 @@ export default function ProductCarousel({ title, products, currentUserId }: { ti
               p.sellerId?.toString() === currentUserId || 
               p.sellerId?._id?.toString() === currentUserId
             );
+            
+            // Determine item model for this specific product or use the default
+            const model = p.itemModel || itemModel;
+
             return (
             <Link href={`/product/${p._id || p.id}`} key={p._id || p.id || idx} className={styles.productCard} style={{ textDecoration: 'none', color: 'inherit' }}>
               <div className={styles.imageWrapper}>
@@ -46,7 +51,11 @@ export default function ProductCarousel({ title, products, currentUserId }: { ti
                 {isOwnProduct ? (
                   <button className={styles.ownProductBtn} disabled>Your Listing</button>
                 ) : (
-                  <button className={styles.addToCartBtn}>Add to Cart</button>
+                  <AddToCartButton 
+                    itemId={(p._id || p.id).toString()} 
+                    itemModel={model} 
+                    className={styles.addToCartBtn} 
+                  />
                 )}
               </div>
             </Link>
