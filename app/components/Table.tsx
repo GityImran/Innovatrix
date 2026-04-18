@@ -54,9 +54,11 @@ const s: Record<string, React.CSSProperties> = {
   container: {
     width: "100%",
     overflowX: "auto",
-    borderRadius: "8px",
-    border: "1px solid #1f1f1f",
-    backgroundColor: "#0a0a0a",
+    borderRadius: "16px",
+    border: "1px solid rgba(255, 255, 255, 0.08)",
+    background: "rgba(15, 23, 42, 0.4)",
+    backdropFilter: "blur(12px)",
+    boxShadow: "0 8px 32px rgba(0, 0, 0, 0.2)",
   },
   table: {
     width: "100%",
@@ -66,18 +68,18 @@ const s: Record<string, React.CSSProperties> = {
   },
   th: {
     padding: "1rem",
-    backgroundColor: "#111",
+    backgroundColor: "rgba(0, 0, 0, 0.2)",
     color: "#94a3b8",
     fontWeight: 600,
-    borderBottom: "1px solid #1f1f1f",
+    borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
   },
   td: {
     padding: "1rem",
     color: "#f8fafc",
-    borderBottom: "1px solid #1f1f1f",
+    borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
   },
   tr: {
-    transition: "background-color 0.15s",
+    transition: "background-color 0.15s ease",
   },
   noData: {
     padding: "2rem",

@@ -186,10 +186,13 @@ export default function SellerVerification() {
   }
 
   return (
-    <div>
+    <div style={s.pageWrapper}>
       <h1 style={s.title}>Seller Verification</h1>
       {loading ? (
-        <div style={s.loading}>Loading requests...</div>
+        <div style={s.loadingContainer}>
+          <div style={s.spinner} />
+          <p style={s.loadingText}>Loading requests...</p>
+        </div>
       ) : (
         <Table
           columns={columns}
@@ -211,10 +214,18 @@ function InfoItem({ label, value }: { label: string; value: string }) {
 }
 
 const s: Record<string, React.CSSProperties> = {
-  title: {
-    fontSize: "1.875rem",
-    fontWeight: 700,
+  pageWrapper: {
+    minHeight: "100vh",
+    backgroundColor: "#000",
+    backgroundImage: "radial-gradient(circle at top right, #f59e0b10, transparent 40%), radial-gradient(circle at bottom left, #22c55e10, transparent 40%)",
+    padding: "2rem",
+    fontFamily: "'Inter', system-ui, sans-serif",
     color: "#f8fafc",
+  },
+  title: {
+    fontSize: "2.5rem",
+    fontWeight: 800,
+    letterSpacing: "-0.02em",
     marginBottom: "2rem",
   },
   badge: {
@@ -223,13 +234,14 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: "0.75rem",
     fontWeight: 600,
     textTransform: "capitalize",
+    border: "1px solid transparent",
   },
   actions: {
     display: "flex",
     gap: "0.5rem",
   },
   viewBtn: {
-    backgroundColor: "rgba(245,158,11,0.1)",
+    backgroundColor: "rgba(245,158,11,0.05)",
     color: "#f59e0b",
     border: "1px solid rgba(245,158,11,0.2)",
     padding: "0.5rem 1rem",
@@ -240,9 +252,16 @@ const s: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     gap: "0.5rem",
+    transition: "all 0.2s ease",
   },
   detailPage: {
     animation: "fadeIn 0.3s ease-out",
+    minHeight: "100vh",
+    backgroundColor: "#000",
+    backgroundImage: "radial-gradient(circle at top right, #f59e0b10, transparent 40%), radial-gradient(circle at bottom left, #22c55e10, transparent 40%)",
+    padding: "2rem",
+    fontFamily: "'Inter', system-ui, sans-serif",
+    color: "#f8fafc",
   },
   backBtn: {
     backgroundColor: "transparent",
@@ -255,6 +274,7 @@ const s: Record<string, React.CSSProperties> = {
     marginBottom: "2rem",
     fontSize: "1rem",
     fontWeight: 600,
+    transition: "color 0.2s",
   },
   detailGrid: {
     display: "grid",
@@ -262,18 +282,23 @@ const s: Record<string, React.CSSProperties> = {
     gap: "2rem",
   },
   detailCard: {
-    backgroundColor: "#0a0a0a",
-    border: "1px solid #1f1f1f",
+    background: "rgba(15, 23, 42, 0.6)",
+    backdropFilter: "blur(12px)",
+    border: "1px solid rgba(255, 255, 255, 0.08)",
     padding: "2rem",
     borderRadius: "16px",
+    boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4)",
   },
   cardTitle: {
     fontSize: "1.25rem",
     fontWeight: 700,
     color: "#f8fafc",
     marginBottom: "1.5rem",
-    borderBottom: "1px solid #1f1f1f",
+    borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
     paddingBottom: "1rem",
+    display: "flex",
+    alignItems: "center",
+    gap: "0.75rem",
   },
   infoGrid: {
     display: "grid",
@@ -283,7 +308,11 @@ const s: Record<string, React.CSSProperties> = {
   infoItem: {
     display: "flex",
     flexDirection: "column",
-    gap: "0.25rem",
+    gap: "0.4rem",
+    backgroundColor: "rgba(255, 255, 255, 0.02)",
+    padding: "1rem",
+    borderRadius: "10px",
+    border: "1px solid rgba(255, 255, 255, 0.03)",
   },
   infoLabel: {
     fontSize: "0.75rem",
@@ -335,12 +364,16 @@ const s: Record<string, React.CSSProperties> = {
   statusInfo: {
     color: "#94a3b8",
     fontSize: "0.875rem",
-    marginBottom: "1rem",
+    marginBottom: "1.5rem",
+    padding: "0.75rem",
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderRadius: "8px",
+    textAlign: "center",
   },
   approveBtn: {
-    backgroundColor: "#22c55e",
-    color: "#fff",
-    border: "none",
+    backgroundColor: "rgba(34,197,94,0.1)",
+    color: "#22c55e",
+    border: "1px solid rgba(34,197,94,0.2)",
     padding: "0.75rem",
     borderRadius: "10px",
     cursor: "pointer",
@@ -350,11 +383,12 @@ const s: Record<string, React.CSSProperties> = {
     alignItems: "center",
     justifyContent: "center",
     gap: "0.5rem",
+    transition: "all 0.2s ease",
   },
   rejectBtn: {
-    backgroundColor: "#ef4444",
-    color: "#fff",
-    border: "none",
+    backgroundColor: "rgba(239,68,68,0.1)",
+    color: "#ef4444",
+    border: "1px solid rgba(239,68,68,0.2)",
     padding: "0.75rem",
     borderRadius: "10px",
     cursor: "pointer",
@@ -364,11 +398,37 @@ const s: Record<string, React.CSSProperties> = {
     alignItems: "center",
     justifyContent: "center",
     gap: "0.5rem",
+    transition: "all 0.2s ease",
   },
-  loading: {
-    color: "#94a3b8",
-    textAlign: "center",
-    marginTop: "4rem",
+  loadingContainer: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "4rem",
+  },
+  spinner: {
+    width: "40px",
+    height: "40px",
+    border: "3px solid rgba(245, 158, 11, 0.1)",
+    borderTop: "3px solid #f59e0b",
+    borderRadius: "50%",
+    animation: "spin 1s linear infinite",
+  },
+  loadingText: {
+    marginTop: "1.5rem",
+    color: "#64748b",
+    fontSize: "0.9rem",
+    letterSpacing: "0.05em",
   },
 };
+
+// Add standard spin keyframes using a small hack or rely on existing global styles.
+if (typeof document !== "undefined") {
+  const style = document.createElement("style");
+  style.innerHTML = `
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+  `;
+  document.head.appendChild(style);
+}
 

@@ -184,10 +184,13 @@ export default function ActiveSellers() {
   }
 
   return (
-    <div>
+    <div style={s.pageWrapper}>
       <h1 style={s.title}>Active Sellers</h1>
       {loading ? (
-        <div style={s.loading}>Loading sellers...</div>
+        <div style={s.loadingContainer}>
+          <div style={s.spinner} />
+          <p style={s.loadingText}>Loading sellers...</p>
+        </div>
       ) : (
         <Table columns={columns} data={sellers} keyExtractor={(item) => item.id} />
       )}
@@ -205,10 +208,18 @@ function InfoItem({ label, value }: { label: string; value: string }) {
 }
 
 const s: Record<string, React.CSSProperties> = {
-  title: {
-    fontSize: "1.875rem",
-    fontWeight: 700,
+  pageWrapper: {
+    minHeight: "100vh",
+    backgroundColor: "#000",
+    backgroundImage: "radial-gradient(circle at top right, #3b82f610, transparent 40%), radial-gradient(circle at bottom left, #22c55e10, transparent 40%)",
+    padding: "2rem",
+    fontFamily: "'Inter', system-ui, sans-serif",
     color: "#f8fafc",
+  },
+  title: {
+    fontSize: "2.5rem",
+    fontWeight: 800,
+    letterSpacing: "-0.02em",
     marginBottom: "2rem",
   },
   badge: {
@@ -223,9 +234,9 @@ const s: Record<string, React.CSSProperties> = {
     gap: "0.5rem",
   },
   viewBtn: {
-    backgroundColor: "rgba(59,130,246,0.1)",
+    backgroundColor: "rgba(59,130,246,0.05)",
     color: "#3b82f6",
-    border: "1px solid rgba(59,130,246,0.2)",
+    border: "1px solid rgba(59,130,246,0.3)",
     padding: "0.4rem 0.8rem",
     borderRadius: "6px",
     cursor: "pointer",
@@ -234,11 +245,12 @@ const s: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     gap: "0.4rem",
+    transition: "all 0.2s ease",
   },
   disableBtn: {
-    backgroundColor: "rgba(239,68,68,0.1)",
+    backgroundColor: "rgba(239,68,68,0.05)",
     color: "#ef4444",
-    border: "1px solid rgba(239,68,68,0.2)",
+    border: "1px solid rgba(239,68,68,0.3)",
     padding: "0.4rem 0.8rem",
     borderRadius: "6px",
     cursor: "pointer",
@@ -247,11 +259,12 @@ const s: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     gap: "0.4rem",
+    transition: "all 0.2s ease",
   },
   enableBtn: {
-    backgroundColor: "rgba(34,197,94,0.1)",
+    backgroundColor: "rgba(34,197,94,0.05)",
     color: "#22c55e",
-    border: "1px solid rgba(34,197,94,0.2)",
+    border: "1px solid rgba(34,197,94,0.3)",
     padding: "0.4rem 0.8rem",
     borderRadius: "6px",
     cursor: "pointer",
@@ -260,14 +273,37 @@ const s: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     gap: "0.4rem",
+    transition: "all 0.2s ease",
   },
-  loading: {
-    color: "#94a3b8",
-    textAlign: "center",
-    marginTop: "4rem",
+  loadingContainer: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "4rem",
+  },
+  spinner: {
+    width: "40px",
+    height: "40px",
+    border: "3px solid rgba(59, 130, 246, 0.1)",
+    borderTop: "3px solid #3b82f6",
+    borderRadius: "50%",
+    animation: "spin 1s linear infinite",
+  },
+  loadingText: {
+    marginTop: "1.5rem",
+    color: "#64748b",
+    fontSize: "0.9rem",
+    letterSpacing: "0.05em",
   },
   detailPage: {
     animation: "fadeIn 0.3s ease-out",
+    minHeight: "100vh",
+    backgroundColor: "#000",
+    backgroundImage: "radial-gradient(circle at top right, #3b82f610, transparent 40%), radial-gradient(circle at bottom left, #22c55e10, transparent 40%)",
+    padding: "2rem",
+    fontFamily: "'Inter', system-ui, sans-serif",
+    color: "#f8fafc",
   },
   backBtn: {
     backgroundColor: "transparent",
@@ -280,6 +316,7 @@ const s: Record<string, React.CSSProperties> = {
     marginBottom: "2rem",
     fontSize: "1rem",
     fontWeight: 600,
+    transition: "color 0.2s",
   },
   detailGrid: {
     display: "grid",
@@ -287,18 +324,23 @@ const s: Record<string, React.CSSProperties> = {
     gap: "2rem",
   },
   detailCard: {
-    backgroundColor: "#0a0a0a",
-    border: "1px solid #1f1f1f",
+    background: "rgba(15, 23, 42, 0.6)",
+    backdropFilter: "blur(12px)",
+    border: "1px solid rgba(255, 255, 255, 0.08)",
     padding: "2rem",
     borderRadius: "16px",
+    boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4)",
   },
   cardTitle: {
     fontSize: "1.25rem",
     fontWeight: 700,
     color: "#f8fafc",
     marginBottom: "1.5rem",
-    borderBottom: "1px solid #1f1f1f",
+    borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
     paddingBottom: "1rem",
+    display: "flex",
+    alignItems: "center",
+    gap: "0.75rem",
   },
   infoGrid: {
     display: "grid",
@@ -308,7 +350,11 @@ const s: Record<string, React.CSSProperties> = {
   infoItem: {
     display: "flex",
     flexDirection: "column",
-    gap: "0.25rem",
+    gap: "0.4rem",
+    backgroundColor: "rgba(255, 255, 255, 0.02)",
+    padding: "1rem",
+    borderRadius: "10px",
+    border: "1px solid rgba(255, 255, 255, 0.03)",
   },
   infoLabel: {
     fontSize: "0.75rem",
