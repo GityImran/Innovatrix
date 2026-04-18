@@ -5,9 +5,9 @@ import CartClient from "./CartClient";
 
 export default function CartPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-black text-slate-100">
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "#080808", color: "#e2e8f0" }}>
       <Header />
-      <main className="flex-grow">
+      <main style={{ flex: 1 }}>
         <CartClient />
       </main>
       <Footer />

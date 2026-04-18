@@ -1,27 +1,50 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import styles from "./Header.module.css";
 
-export default function CartCount({ initialCount = 0 }: { initialCount?: number }) {
-  const [count, setCount] = useState(initialCount);
+export default function CartCount() {
+  const [count, setCount] = useState(0);
+
+  const updateCount = async () => {
+    try {
+      const res = await fetch("/api/cart");
+      if (res.ok) {
+        const data = await res.json();
+        setCount(Array.isArray(data) ? data.length : 0);
+      }
+    } catch {
+      setCount(0);
+    }
+  };
 
   useEffect(() => {
-    // Only fetch if we're on the client
-    const fetchCount = async () => {
-      try {
-        const res = await fetch("/api/cart");
-        if (res.ok) {
-          const data = await res.json();
-          setCount(data.length);
-        }
-      } catch (err) {
-        console.error("Failed to fetch cart count", err);
-      }
-    };
-
-    fetchCount();
+    updateCount();
+    // Refresh when a cartUpdated event fires (after adding an item)
+    window.addEventListener("cartUpdated", updateCount);
+    return () => window.removeEventListener("cartUpdated", updateCount);
   }, []);
 
-  return <span className={styles.cartCount}>{count}</span>;
+  if (count === 0) return null;
+
+  return (
+    <span style={{
+      position: "absolute",
+      top: "-4px",
+      right: "-4px",
+      background: "#f59e0b",
+      color: "#000",
+      fontSize: "10px",
+      fontWeight: 900,
+      width: "17px",
+      height: "17px",
+      borderRadius: "50%",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      border: "2px solid #080808",
+      lineHeight: 1,
+    }}>
+      {count > 9 ? "9+" : count}
+    </span>
+  );
 }

@@ -3,56 +3,80 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Trash2, ShoppingBag, ArrowRight, CreditCard } from "lucide-react";
+import { Trash2, ShoppingBag, ArrowRight, CreditCard, CheckCircle, ChevronRight, Banknote, Wallet, Smartphone } from "lucide-react";
+
+type CartItem = {
+  _id: string;
+  itemModel: string;
+  itemId: {
+    _id: string;
+    title: string;
+    expectedPrice?: number;
+    pricing?: { day?: number };
+    image?: { url: string };
+    category?: string;
+    sellerDomain?: string;
+  } | null;
+};
+
+type CheckoutStep = "cart" | "payment" | "review" | "success";
+type PaymentMethod = "cod" | "upi" | "card" | null;
+
+const STEPS = ["Cart", "Payment", "Review", "Done"];
+
+const globalStyles = `
+  @keyframes fadeUp {from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  @keyframes scaleIn {from{transform:scale(0.6);opacity:0}to{transform:scale(1);opacity:1}}
+  @keyframes shimmer {0%{background-position:-600px 0}100%{background-position:600px 0}}
+  .shimmer{background:linear-gradient(90deg,#111 25%,#1c1c1c 50%,#111 75%);background-size:1200px 100%;animation:shimmer 1.6s infinite}
+  .fade-item{animation:fadeUp 0.3s ease both}
+  .remove-btn:hover{color:#f87171 !important;background:rgba(239,68,68,0.1) !important}
+  .item-link:hover{color:#fbbf24 !important}
+  .action-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 10px 32px rgba(245,158,11,0.45) !important}
+  .pay-card{transition:border-color 0.2s, background 0.2s, box-shadow 0.2s;}
+  .pay-card:hover{border-color:rgba(245,158,11,0.4) !important;background:rgba(245,158,11,0.04) !important}
+`;
 
 export default function CartClient() {
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [step, setStep] = useState<CheckoutStep>("cart");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(null);
+  const [placedOrders, setPlacedOrders] = useState<any[]>([]);
   const router = useRouter();
 
-  useEffect(() => {
-    fetchCart();
-  }, []);
+  useEffect(() => { fetchCart(); }, []);
 
+  /* ── Backend (unchanged) ────────────────────── */
   const fetchCart = async () => {
     try {
       const res = await fetch("/api/cart");
-      if (res.ok) {
-        const data = await res.json();
-        setItems(data);
-      }
-    } catch (err) {
-      console.error("Failed to fetch cart", err);
-    } finally {
-      setLoading(false);
-    }
+      if (res.ok) setItems(await res.json());
+    } catch (err) { console.error("Failed to fetch cart", err); }
+    finally { setLoading(false); }
   };
 
   const removeItem = async (cartItemId: string) => {
     try {
-      const res = await fetch(`/api/cart?id=${cartItemId}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        setItems(items.filter((item) => item._id !== cartItemId));
-      }
-    } catch (err) {
-      console.error("Failed to remove item", err);
-    }
+      const res = await fetch(`/api/cart?id=${cartItemId}`, { method: "DELETE" });
+      if (res.ok) setItems(items.filter((item) => item._id !== cartItemId));
+    } catch (err) { console.error("Failed to remove item", err); }
   };
 
   const handleCheckout = async () => {
     if (items.length === 0) return;
-    
     setCheckoutLoading(true);
     try {
       const res = await fetch("/api/cart/checkout", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentMethod: paymentMethod ?? "cod" }),
       });
       if (res.ok) {
-        alert("🎉 Order placed successfully for all items!");
-        router.push("/dashboard");
+        const data = await res.json();
+        setPlacedOrders(data.orders || []);
+        setStep("success");
       } else {
         const d = await res.json();
         alert(d.error || "Checkout failed");
@@ -60,88 +84,473 @@ export default function CartClient() {
     } catch (err) {
       console.error("Checkout failed", err);
       alert("An unexpected error occurred during checkout");
-    } finally {
-      setCheckoutLoading(false);
-    }
+    } finally { setCheckoutLoading(false); }
   };
 
   const subtotal = items.reduce((acc, item) => {
-    const price = item.itemModel === "Product" 
-      ? item.itemId?.expectedPrice 
-      : (item.itemId?.pricing?.day || 0);
+    const price = item.itemModel === "Product"
+      ? item.itemId?.expectedPrice
+      : item.itemId?.pricing?.day || 0;
     return acc + (price || 0);
   }, 0);
 
+  /* ── Shared: Step Progress Bar ──────────────── */
+  const stepIndex = { cart: 0, payment: 1, review: 2, success: 3 }[step];
+  const StepBar = () => (
+    <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "40px" }}>
+      {STEPS.map((s, i) => (
+        <React.Fragment key={s}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <div style={{
+              width: "24px", height: "24px", borderRadius: "50%",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: "11px", fontWeight: 800,
+              background: i <= stepIndex
+                ? "linear-gradient(135deg,#f59e0b,#d97706)"
+                : "rgba(255,255,255,0.05)",
+              color: i <= stepIndex ? "#000" : "#334155",
+              boxShadow: i === stepIndex ? "0 0 12px rgba(245,158,11,0.4)" : "none",
+              transition: "all 0.3s",
+            }}>
+              {i < stepIndex ? "✓" : i + 1}
+            </div>
+            <span style={{ fontSize: "12px", fontWeight: 600, color: i <= stepIndex ? "#f59e0b" : "#1e293b", display: "flex" as const }}>
+              {s}
+            </span>
+          </div>
+          {i < STEPS.length - 1 && (
+            <div style={{ flex: 1, height: "1px", background: i < stepIndex ? "rgba(245,158,11,0.4)" : "rgba(255,255,255,0.06)", transition: "background 0.3s", minWidth: "20px" }} />
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+
+  /* ── Shared: Back + Title header ─────────────── */
+  const PageHeader = ({ title, subtitle, onBack }: { title: string; subtitle: string; onBack?: () => void }) => (
+    <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "32px" }}>
+      {onBack && (
+        <button onClick={onBack} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#64748b", borderRadius: "10px", padding: "8px 14px", fontSize: "13px", cursor: "pointer", fontWeight: 600, flexShrink: 0 }}>
+          ← Back
+        </button>
+      )}
+      <div>
+        <h1 style={{ margin: 0, fontSize: "1.6rem", fontWeight: 900, letterSpacing: "-0.02em", background: "linear-gradient(135deg,#fff,#94a3b8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+          {title}
+        </h1>
+        <p style={{ margin: "2px 0 0", fontSize: "13px", color: "#475569" }}>{subtitle}</p>
+      </div>
+    </div>
+  );
+
+  /* ── Skeleton ─────────────────────────────────── */
   if (loading) {
-    return <div className="min-h-[400px] bg-black flex items-center justify-center text-slate-400">Loading your cart...</div>;
+    return (
+      <div style={{ minHeight: "100vh", backgroundColor: "#080808", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <style>{globalStyles}</style>
+        <div style={{ maxWidth: "900px", width: "100%", padding: "48px 24px" }}>
+          {[1, 2, 3].map(i => (
+            <div key={i} className="shimmer" style={{ height: "104px", borderRadius: "18px", marginBottom: "14px" }} />
+          ))}
+        </div>
+      </div>
+    );
   }
 
-  return (
-    <div className="flex-grow container mx-auto px-4 py-12 max-w-5xl">
-        <div className="flex items-center gap-3 mb-10">
-          <ShoppingBag className="text-amber-500" size={32} />
-          <h1 className="text-4xl font-bold tracking-tight">Your Shopping Cart</h1>
-        </div>
-
-        {items.length === 0 ? (
-          <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-16 text-center">
-            <div className="text-6xl mb-6">🏜️</div>
-            <h2 className="text-2xl font-bold mb-4 text-white">Your cart is empty</h2>
-            <p className="text-slate-400 mb-8 max-w-md mx-auto">
-              Looks like you haven't added anything to your cart yet. 
-              Explore the campus marketplace to find some amazing deals!
-            </p>
-            <Link 
-              href="/" 
-              className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-black font-bold py-3 px-8 rounded-xl transition-all"
-            >
+  /* ── Empty Cart ───────────────────────────────── */
+  if (items.length === 0 && step === "cart") {
+    return (
+      <div style={{ minHeight: "100vh", backgroundColor: "#080808", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 24px" }}>
+        <style>{globalStyles}</style>
+        <div style={{ textAlign: "center", maxWidth: "400px" }}>
+          <div style={{ fontSize: "5rem", marginBottom: "24px", opacity: 0.5 }}>🛒</div>
+          <h2 style={{ margin: "0 0 12px", fontSize: "1.75rem", fontWeight: 800, color: "#f1f5f9", letterSpacing: "-0.02em" }}>Your cart is empty</h2>
+          <p style={{ margin: "0 0 32px", fontSize: "14px", color: "#475569", lineHeight: 1.7 }}>
+            Explore the campus marketplace to find amazing deals!
+          </p>
+          <Link href="/search" style={{ textDecoration: "none" }}>
+            <button style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "14px 28px", borderRadius: "14px", background: "linear-gradient(135deg,#f59e0b,#d97706)", color: "#000", fontWeight: 800, fontSize: "15px", border: "none", cursor: "pointer", boxShadow: "0 4px 20px rgba(245,158,11,0.3)" }}>
               Start Shopping <ArrowRight size={18} />
-            </Link>
+            </button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── SUCCESS ──────────────────────────────────── */
+  if (step === "success") {
+    const methodLabel = paymentMethod === "cod" ? "Cash on Delivery" : paymentMethod === "upi" ? "UPI / QR" : "Card Payment";
+    return (
+      <div style={{ minHeight: "100vh", backgroundColor: "#080808", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 24px" }}>
+        <style>{globalStyles}</style>
+        <div style={{ textAlign: "center", maxWidth: "500px", width: "100%" }}>
+          <div style={{ width: "90px", height: "90px", borderRadius: "50%", background: "rgba(16,185,129,0.1)", border: "2px solid rgba(16,185,129,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 28px", animation: "scaleIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both" }}>
+            <CheckCircle size={44} color="#10b981" />
           </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Items List */}
-            <div className="lg:col-span-2 flex flex-col gap-4">
-              {items.map((item) => {
+          <h1 style={{ margin: "0 0 10px", fontSize: "2rem", fontWeight: 900, color: "#f1f5f9", letterSpacing: "-0.02em", animation: "fadeUp 0.4s 0.2s both" }}>
+            Order Placed! 🎉
+          </h1>
+          <p style={{ margin: "0 0 6px", fontSize: "15px", color: "#64748b", animation: "fadeUp 0.4s 0.3s both" }}>
+            {placedOrders.length} {placedOrders.length === 1 ? "order" : "orders"} confirmed
+          </p>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "5px 14px", borderRadius: "999px", background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.25)", marginBottom: "28px", animation: "fadeUp 0.4s 0.35s both" }}>
+            <span style={{ fontSize: "12px", color: "#f59e0b", fontWeight: 700 }}>💳 {methodLabel}</span>
+          </div>
+
+          {placedOrders.length > 0 && (
+            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "16px", padding: "20px", marginBottom: "28px", animation: "fadeUp 0.4s 0.4s both", textAlign: "left" }}>
+              <p style={{ margin: "0 0 12px", fontSize: "11px", fontWeight: 700, color: "#334155", letterSpacing: "0.15em", textTransform: "uppercase" }}>Order References</p>
+              {placedOrders.map((o: any, i: number) => (
+                <p key={i} style={{ margin: "0 0 6px", fontSize: "12px", color: "#475569", fontFamily: "monospace" }}>
+                  <span style={{ color: "#64748b" }}>#{i + 1}</span>{" "}
+                  <span style={{ color: "#94a3b8" }}>{o._id || `order-${i + 1}`}</span>
+                </p>
+              ))}
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: "12px", justifyContent: "center", animation: "fadeUp 0.4s 0.5s both" }}>
+            <button onClick={() => router.push("/dashboard")} style={{ padding: "14px 28px", borderRadius: "14px", background: "linear-gradient(135deg,#f59e0b,#d97706)", color: "#000", fontWeight: 800, fontSize: "14px", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", boxShadow: "0 4px 20px rgba(245,158,11,0.3)" }}>
+              View Orders <ArrowRight size={16} />
+            </button>
+            <button onClick={() => router.push("/search")} style={{ padding: "14px 24px", borderRadius: "14px", background: "rgba(255,255,255,0.04)", color: "#64748b", fontWeight: 600, fontSize: "14px", border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer" }}>
+              Keep Shopping
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── PAYMENT STEP ──────────────────────────────── */
+  if (step === "payment") {
+    const payOptions = [
+      {
+        id: "cod" as PaymentMethod,
+        icon: <Banknote size={28} color="#10b981" />,
+        title: "Cash on Delivery",
+        subtitle: "Pay directly to the seller when you pick up or receive the item",
+        badge: "Most Popular",
+        badgeColor: "#10b981",
+        accentColor: "rgba(16,185,129,0.15)",
+        borderColor: "rgba(16,185,129,0.35)",
+      },
+      {
+        id: "upi" as PaymentMethod,
+        icon: <Smartphone size={28} color="#818cf8" />,
+        title: "UPI / QR Code",
+        subtitle: "Pay instantly via Google Pay, PhonePe, Paytm, or any UPI app",
+        badge: "Instant",
+        badgeColor: "#818cf8",
+        accentColor: "rgba(129,140,248,0.15)",
+        borderColor: "rgba(129,140,248,0.35)",
+      },
+      {
+        id: "card" as PaymentMethod,
+        icon: <CreditCard size={28} color="#f59e0b" />,
+        title: "Debit / Credit Card",
+        subtitle: "Secure card payment via Razorpay or Stripe gateway",
+        badge: "Secure",
+        badgeColor: "#f59e0b",
+        accentColor: "rgba(245,158,11,0.15)",
+        borderColor: "rgba(245,158,11,0.35)",
+      },
+    ];
+
+    return (
+      <div style={{ minHeight: "100vh", backgroundColor: "#080808", color: "#e2e8f0" }}>
+        <style>{globalStyles}</style>
+        <div style={{ maxWidth: "680px", margin: "0 auto", padding: "48px 24px" }}>
+          <StepBar />
+          <PageHeader
+            title="Choose Payment Method"
+            subtitle="Select how you'd like to pay for your order"
+            onBack={() => setStep("cart")}
+          />
+
+          {/* Payment options */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "14px", marginBottom: "36px" }}>
+            {payOptions.map((opt, idx) => {
+              const isSelected = paymentMethod === opt.id;
+              return (
+                <div
+                  key={opt.id}
+                  className="pay-card fade-item"
+                  onClick={() => setPaymentMethod(opt.id)}
+                  style={{
+                    animationDelay: `${idx * 80}ms`,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "18px",
+                    padding: "20px 22px",
+                    borderRadius: "18px",
+                    cursor: "pointer",
+                    border: isSelected ? `2px solid ${opt.borderColor}` : "2px solid rgba(255,255,255,0.07)",
+                    background: isSelected ? opt.accentColor : "rgba(255,255,255,0.02)",
+                    boxShadow: isSelected ? `0 0 24px ${opt.accentColor}` : "none",
+                    position: "relative",
+                    transition: "all 0.2s",
+                  }}
+                >
+                  {/* Icon */}
+                  <div style={{ width: "52px", height: "52px", borderRadius: "14px", background: "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    {opt.icon}
+                  </div>
+
+                  {/* Text */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                      <span style={{ fontSize: "15px", fontWeight: 700, color: "#f1f5f9" }}>{opt.title}</span>
+                      <span style={{ fontSize: "10px", fontWeight: 800, padding: "2px 8px", borderRadius: "999px", background: `rgba(${opt.badgeColor === "#10b981" ? "16,185,129" : opt.badgeColor === "#818cf8" ? "129,140,248" : "245,158,11"},0.15)`, color: opt.badgeColor, border: `1px solid ${opt.badgeColor}40`, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                        {opt.badge}
+                      </span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: "13px", color: "#475569", lineHeight: 1.5 }}>{opt.subtitle}</p>
+                  </div>
+
+                  {/* Radio indicator */}
+                  <div style={{ width: "20px", height: "20px", borderRadius: "50%", border: isSelected ? `2px solid ${opt.borderColor}` : "2px solid rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.2s" }}>
+                    {isSelected && <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: opt.borderColor }} />}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* COD Note */}
+          {paymentMethod === "cod" && (
+            <div className="fade-item" style={{ background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.15)", borderRadius: "14px", padding: "14px 18px", marginBottom: "24px", display: "flex", gap: "10px" }}>
+              <span style={{ fontSize: "1rem", flexShrink: 0 }}>💡</span>
+              <p style={{ margin: 0, fontSize: "12px", color: "#475569", lineHeight: 1.7 }}>
+                For Cash on Delivery, arrange exact amount with the seller before meeting. Keep your order reference handy.
+              </p>
+            </div>
+          )}
+
+          {/* UPI Note */}
+          {paymentMethod === "upi" && (
+            <div className="fade-item" style={{ background: "rgba(129,140,248,0.05)", border: "1px solid rgba(129,140,248,0.15)", borderRadius: "14px", padding: "14px 18px", marginBottom: "24px", display: "flex", gap: "10px" }}>
+              <span style={{ fontSize: "1rem", flexShrink: 0 }}>📱</span>
+              <p style={{ margin: 0, fontSize: "12px", color: "#475569", lineHeight: 1.7 }}>
+                After placing your order, the seller will share their UPI ID or QR code with you via campus email.
+              </p>
+            </div>
+          )}
+
+          {/* Card Note */}
+          {paymentMethod === "card" && (
+            <div className="fade-item" style={{ background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.15)", borderRadius: "14px", padding: "14px 18px", marginBottom: "24px", display: "flex", gap: "10px" }}>
+              <span style={{ fontSize: "1rem", flexShrink: 0 }}>🔒</span>
+              <p style={{ margin: 0, fontSize: "12px", color: "#475569", lineHeight: 1.7 }}>
+                Card payment gateway integration coming soon. For now, please coordinate payment directly with the seller.
+              </p>
+            </div>
+          )}
+
+          {/* Order total preview */}
+          <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "16px", padding: "16px 20px", marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: "13px", color: "#475569" }}>Amount to pay</span>
+            <span style={{ fontSize: "1.5rem", fontWeight: 900, color: "#f59e0b", letterSpacing: "-0.02em" }}>₹{subtotal?.toLocaleString("en-IN")}</span>
+          </div>
+
+          {/* CTA */}
+          <button
+            className="action-btn"
+            disabled={!paymentMethod}
+            onClick={() => setStep("review")}
+            style={{
+              width: "100%",
+              padding: "17px",
+              borderRadius: "16px",
+              border: "none",
+              background: paymentMethod ? "linear-gradient(135deg,#f59e0b,#d97706)" : "rgba(255,255,255,0.05)",
+              color: paymentMethod ? "#000" : "#334155",
+              fontWeight: 900,
+              fontSize: "15px",
+              cursor: paymentMethod ? "pointer" : "not-allowed",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              boxShadow: paymentMethod ? "0 4px 20px rgba(245,158,11,0.25)" : "none",
+              transition: "transform 0.15s, box-shadow 0.15s, background 0.2s",
+              letterSpacing: "0.01em",
+            }}
+          >
+            {paymentMethod ? (<>Review Order <ArrowRight size={18} /></>) : "Select a payment method to continue"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── REVIEW STEP ─────────────────────────────── */
+  if (step === "review") {
+    const methodMeta: Record<string, { label: string; icon: string; color: string }> = {
+      cod:  { label: "Cash on Delivery", icon: "💵", color: "#10b981" },
+      upi:  { label: "UPI / QR Code",    icon: "📱", color: "#818cf8" },
+      card: { label: "Card Payment",     icon: "💳", color: "#f59e0b" },
+    };
+    const method = paymentMethod ? methodMeta[paymentMethod] : null;
+
+    return (
+      <div style={{ minHeight: "100vh", backgroundColor: "#080808", color: "#e2e8f0" }}>
+        <style>{globalStyles}</style>
+        <div style={{ maxWidth: "760px", margin: "0 auto", padding: "48px 24px" }}>
+          <StepBar />
+          <PageHeader
+            title="Review Your Order"
+            subtitle="Confirm items and payment before placing"
+            onBack={() => setStep("payment")}
+          />
+
+          {/* Items */}
+          <p style={{ margin: "0 0 14px", fontSize: "11px", fontWeight: 700, color: "#334155", letterSpacing: "0.15em", textTransform: "uppercase" }}>Items ({items.length})</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "28px" }}>
+            {items.map((item, idx) => {
+              const product = item.itemId;
+              const isSell = item.itemModel === "Product";
+              const price = isSell ? product?.expectedPrice : product?.pricing?.day || 0;
+              return (
+                <div key={item._id} className="fade-item" style={{ animationDelay: `${idx * 50}ms`, display: "flex", gap: "14px", alignItems: "center", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "16px", padding: "14px" }}>
+                  <div style={{ width: "62px", height: "62px", borderRadius: "10px", overflow: "hidden", flexShrink: 0, background: "#111" }}>
+                    {product?.image?.url
+                      ? <img src={product.image.url} alt={product.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem", opacity: 0.4 }}>{isSell ? "📦" : "🔁"}</div>
+                    }
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: isSell ? "#f59e0b" : "#a855f7" }}>
+                      {isSell ? "For Sale" : "For Rent"} · {product?.category}
+                    </span>
+                    <p style={{ margin: "3px 0 0", fontWeight: 700, fontSize: "14px", color: "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {product?.title || "Unknown Item"}
+                    </p>
+                    {product?.sellerDomain && <p style={{ margin: "2px 0 0", fontSize: "11px", color: "#334155" }}>{product.sellerDomain}</p>}
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <p style={{ margin: 0, fontSize: "1.1rem", fontWeight: 900, color: "#f59e0b", letterSpacing: "-0.02em" }}>
+                      ₹{price?.toLocaleString("en-IN")}
+                    </p>
+                    {!isSell && <p style={{ margin: "2px 0 0", fontSize: "11px", color: "#334155" }}>/day</p>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Payment method selected */}
+          {method && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "14px", padding: "14px 18px", marginBottom: "20px" }}>
+              <span style={{ fontSize: "13px", color: "#475569" }}>Payment Method</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span>{method.icon}</span>
+                <span style={{ fontSize: "13px", fontWeight: 700, color: method.color }}>{method.label}</span>
+                <button onClick={() => setStep("payment")} style={{ fontSize: "11px", color: "#475569", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", padding: 0 }}>Change</button>
+              </div>
+            </div>
+          )}
+
+          {/* Order total */}
+          <div style={{ background: "linear-gradient(145deg,rgba(15,15,15,0.98),rgba(10,10,10,0.98))", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "20px", padding: "24px", marginBottom: "20px", position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "absolute", top: "-20px", right: "-20px", width: "100px", height: "100px", background: "rgba(245,158,11,0.08)", borderRadius: "50%", filter: "blur(40px)", pointerEvents: "none" }} />
+            {[
+              { label: `Subtotal (${items.length} items)`, value: `₹${subtotal?.toLocaleString("en-IN")}`, color: "#94a3b8" },
+              { label: "Platform Fee", value: "FREE", color: "#34d399" },
+              { label: "Delivery", value: "Arranged with seller", color: "#334155" },
+            ].map(row => (
+              <div key={row.label} style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px" }}>
+                <span style={{ fontSize: "13px", color: "#475569" }}>{row.label}</span>
+                <span style={{ fontSize: "13px", fontWeight: 600, color: row.color }}>{row.value}</span>
+              </div>
+            ))}
+            <div style={{ height: "1px", background: "rgba(255,255,255,0.06)", margin: "16px 0" }} />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <span style={{ fontWeight: 700, color: "#64748b", fontSize: "14px" }}>Total</span>
+              <span style={{ fontSize: "2rem", fontWeight: 900, color: "#f59e0b", letterSpacing: "-0.03em" }}>₹{subtotal?.toLocaleString("en-IN")}</span>
+            </div>
+          </div>
+
+          {/* Notice */}
+          <div style={{ background: "rgba(59,130,246,0.04)", border: "1px solid rgba(59,130,246,0.12)", borderRadius: "14px", padding: "14px 18px", marginBottom: "24px", display: "flex", gap: "10px" }}>
+            <span style={{ fontSize: "1rem", flexShrink: 0 }}>ℹ️</span>
+            <p style={{ margin: 0, fontSize: "12px", color: "#475569", lineHeight: 1.7 }}>
+              By confirming, sellers will be notified and will coordinate delivery via campus email. Payment via <strong style={{ color: "#94a3b8" }}>{method?.label}</strong>.
+            </p>
+          </div>
+
+          {/* Confirm CTA */}
+          <button
+            className="action-btn"
+            onClick={handleCheckout}
+            disabled={checkoutLoading}
+            style={{ width: "100%", padding: "18px", borderRadius: "16px", border: "none", background: checkoutLoading ? "rgba(245,158,11,0.4)" : "linear-gradient(135deg,#f59e0b,#d97706)", color: "#000", fontWeight: 900, fontSize: "16px", cursor: checkoutLoading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", boxShadow: "0 4px 24px rgba(245,158,11,0.3)", transition: "transform 0.15s, box-shadow 0.15s", letterSpacing: "0.01em" }}
+          >
+            {checkoutLoading ? "Placing Your Order…" : (<>Confirm & Place Order <ArrowRight size={20} /></>)}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── CART STEP ────────────────────────────────── */
+  return (
+    <>
+      <style>{globalStyles}</style>
+      <div style={{ minHeight: "100vh", backgroundColor: "#080808", color: "#e2e8f0" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "48px 24px" }}>
+
+          {/* Header */}
+          <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "40px" }}>
+            <div style={{ width: "48px", height: "48px", borderRadius: "14px", background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <ShoppingBag size={22} color="#f59e0b" />
+            </div>
+            <div>
+              <h1 style={{ margin: 0, fontSize: "clamp(1.5rem,3vw,2rem)", fontWeight: 900, letterSpacing: "-0.02em", background: "linear-gradient(135deg,#fff 60%,#94a3b8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                Shopping Cart
+              </h1>
+              <p style={{ margin: 0, fontSize: "13px", color: "#475569", marginTop: "2px" }}>
+                {items.length} {items.length === 1 ? "item" : "items"}
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr min(360px,100%)", gap: "32px", alignItems: "start" }}>
+
+            {/* Item cards */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {items.map((item, idx) => {
                 const product = item.itemId;
                 const isSell = item.itemModel === "Product";
-                const price = isSell ? product?.expectedPrice : (product?.pricing?.day || 0);
-
+                const price = isSell ? product?.expectedPrice : product?.pricing?.day || 0;
                 return (
-                  <div key={item._id} className="bg-slate-900/60 border border-slate-800 rounded-xl p-4 flex gap-4 items-center">
-                    <div className="w-24 h-24 bg-slate-800 rounded-lg overflow-hidden flex-shrink-0">
-                      {product?.image?.url ? (
-                        <img src={product.image.url} alt={product.title} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-2xl opacity-50">
-                          {isSell ? "📦" : "🔄"}
-                        </div>
-                      )}
+                  <div key={item._id} className="fade-item" style={{ animationDelay: `${idx * 60}ms`, display: "flex", gap: "16px", alignItems: "center", background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "18px", padding: "16px" }}>
+                    <div style={{ width: "88px", height: "88px", borderRadius: "12px", overflow: "hidden", flexShrink: 0, background: "#111", border: "1px solid rgba(255,255,255,0.05)" }}>
+                      {product?.image?.url
+                        ? <img src={product.image.url} alt={product.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem", opacity: 0.4 }}>{isSell ? "📦" : "🔁"}</div>
+                      }
                     </div>
-                    
-                    <div className="flex-grow">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <span className="text-[10px] uppercase font-bold text-slate-500 mb-1 block">
-                            {isSell ? "Buy" : "Rent"} • {product?.category}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px" }}>
+                        <div style={{ minWidth: 0 }}>
+                          <span style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", color: isSell ? "#f59e0b" : "#a855f7", display: "block", marginBottom: "4px" }}>
+                            {isSell ? "🏷️ For Sale" : "🔁 For Rent"} · {product?.category}
                           </span>
-                          <h3 className="font-semibold text-lg text-white">
-                            <Link href={`/product/${product?._id}`} className="hover:text-amber-500 transition-colors">
+                          <Link href={`/product/${product?._id}`} style={{ textDecoration: "none" }}>
+                            <h3 className="item-link" style={{ margin: 0, fontWeight: 700, fontSize: "1rem", color: "#e2e8f0", transition: "color 0.2s", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               {product?.title || "Unknown Item"}
-                            </Link>
-                          </h3>
+                            </h3>
+                          </Link>
+                          <div style={{ display: "flex", alignItems: "baseline", gap: "4px", marginTop: "10px" }}>
+                            <span style={{ fontSize: "1.25rem", fontWeight: 900, color: "#f59e0b", letterSpacing: "-0.02em" }}>₹{price?.toLocaleString("en-IN")}</span>
+                            {!isSell && <span style={{ fontSize: "12px", color: "#475569" }}>/day</span>}
+                          </div>
                         </div>
-                        <button 
-                          onClick={() => removeItem(item._id)}
-                          className="text-slate-500 hover:text-red-500 transition-colors p-2"
-                        >
-                          <Trash2 size={18} />
+                        <button className="remove-btn" onClick={() => removeItem(item._id)} style={{ flexShrink: 0, color: "#334155", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "10px", padding: "8px", display: "flex", alignItems: "center", cursor: "pointer", transition: "color 0.2s, background 0.2s" }} title="Remove">
+                          <Trash2 size={16} />
                         </button>
-                      </div>
-                      
-                      <div className="mt-2 flex items-baseline gap-1">
-                        <span className="text-xl font-bold text-amber-500">₹{price}</span>
-                        {!isSell && <span className="text-xs text-slate-500"> / day</span>}
                       </div>
                     </div>
                   </div>
@@ -149,61 +558,52 @@ export default function CartClient() {
               })}
             </div>
 
-            {/* Summary Sidebar */}
-            <div className="lg:col-span-1">
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sticky top-24">
-                <h2 className="text-xl font-bold mb-6 text-white border-b border-slate-800 pb-4">Order Summary</h2>
-                
-                <div className="flex flex-col gap-4 mb-6">
-                  <div className="flex justify-between text-slate-400">
-                    <span>Items ({items.length})</span>
-                    <span>₹{subtotal}</span>
-                  </div>
-                  <div className="flex justify-between text-slate-400">
-                    <span>Platform Fee</span>
-                    <span className="text-emerald-500">FREE</span>
-                  </div>
-                  <div className="flex justify-between text-slate-400">
-                    <span>Delivery</span>
-                    <span>To be discussed</span>
-                  </div>
+            {/* Summary panel */}
+            <div style={{ position: "sticky", top: "24px" }}>
+              <div style={{ background: "linear-gradient(145deg,rgba(15,15,15,0.98),rgba(10,10,10,0.98))", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "22px", padding: "28px", boxShadow: "0 24px 60px rgba(0,0,0,0.5)", position: "relative", overflow: "hidden" }}>
+                <div style={{ position: "absolute", top: "-30px", right: "-30px", width: "140px", height: "140px", background: "rgba(245,158,11,0.07)", borderRadius: "50%", filter: "blur(50px)", pointerEvents: "none" }} />
+                <h2 style={{ margin: "0 0 22px", fontSize: "15px", fontWeight: 800, color: "#f1f5f9", position: "relative" }}>Order Summary</h2>
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "18px", position: "relative" }}>
+                  {[
+                    { label: `Items (${items.length})`, value: `₹${subtotal?.toLocaleString("en-IN")}`, color: "#94a3b8" },
+                    { label: "Platform Fee", value: "FREE", color: "#34d399" },
+                    { label: "Delivery", value: "TBD", color: "#1e293b" },
+                  ].map(row => (
+                    <div key={row.label} style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: "13px", color: "#475569" }}>{row.label}</span>
+                      <span style={{ fontSize: "13px", fontWeight: 600, color: row.color }}>{row.value}</span>
+                    </div>
+                  ))}
                 </div>
-                
-                <div className="border-t border-slate-800 pt-4 mb-8">
-                  <div className="flex justify-between items-baseline">
-                    <span className="text-lg font-bold text-white">Total Amount</span>
-                    <span className="text-3xl font-extrabold text-amber-500">₹{subtotal}</span>
-                  </div>
+                <div style={{ height: "1px", background: "linear-gradient(90deg,rgba(255,255,255,0.07),transparent)", marginBottom: "18px", position: "relative" }} />
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "24px", position: "relative" }}>
+                  <span style={{ fontSize: "13px", fontWeight: 700, color: "#64748b" }}>Total</span>
+                  <span style={{ fontSize: "2rem", fontWeight: 900, color: "#f59e0b", letterSpacing: "-0.03em" }}>₹{subtotal?.toLocaleString("en-IN")}</span>
                 </div>
 
-                <button 
-                  onClick={handleCheckout}
-                  disabled={checkoutLoading}
-                  className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed text-black font-extrabold py-4 px-6 rounded-xl flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(245,158,11,0.2)]"
+                <button
+                  className="action-btn"
+                  onClick={() => { setPaymentMethod(null); setStep("payment"); }}
+                  style={{ width: "100%", padding: "16px", borderRadius: "14px", border: "none", background: "linear-gradient(135deg,#f59e0b,#d97706)", color: "#000", fontWeight: 900, fontSize: "15px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", boxShadow: "0 4px 20px rgba(245,158,11,0.25)", transition: "transform 0.15s, box-shadow 0.15s", position: "relative", letterSpacing: "0.01em" }}
                 >
-                  {checkoutLoading ? (
-                    "Processing..."
-                  ) : (
-                    <>
-                      Place Order <ArrowRight size={20} />
-                    </>
-                  )}
+                  Choose Payment <ArrowRight size={18} />
                 </button>
-                
-                <div className="mt-6 flex flex-col gap-3">
-                  <div className="flex items-center gap-3 text-xs text-slate-500">
-                    <CreditCard size={14} />
-                    Secure payment powered by Stripe
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-slate-500">
-                    <ShoppingBag size={14} />
-                    Buyer Protection Guarantee
-                  </div>
+
+                <div style={{ marginTop: "18px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {[
+                    { icon: <CreditCard size={13} />, label: "COD / UPI / Card" },
+                    { icon: <ShoppingBag size={13} />, label: "Buyer Protection" },
+                  ].map(t => (
+                    <div key={t.label} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "11px", color: "#1e293b" }}>
+                      <span style={{ color: "#1e293b" }}>{t.icon}</span> {t.label}
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
           </div>
-        )}
+        </div>
       </div>
+    </>
   );
 }

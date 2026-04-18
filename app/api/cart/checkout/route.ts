@@ -13,13 +13,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Read paymentMethod from request body (sent by CartClient)
+    let paymentMethod = "cod";
+    try {
+      const body = await req.json();
+      if (body?.paymentMethod) paymentMethod = body.paymentMethod;
+    } catch {
+      // Body may be empty — fall back to default "cod"
+    }
+
     await connectToDatabase();
 
-    // 1. Get all cart items for the user
-    const cartItems = await CartItem.find({ userId: session.user.id })
-      .populate({
-        path: "itemId",
-      });
+    // 1. Get all cart items for the user (with full product details)
+    const cartItems = await CartItem.find({ userId: session.user.id }).populate({
+      path: "itemId",
+    });
 
     if (cartItems.length === 0) {
       return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
@@ -27,15 +35,17 @@ export async function POST(req: NextRequest) {
 
     const orders = [];
 
-    // 2. Create an order for each item
+    // 2. Create an order for each item and mark the item as sold/rented
     for (const item of cartItems) {
       const productDetail = item.itemId as any;
       if (!productDetail) continue;
 
-      const price = item.itemModel === "Product" 
-        ? productDetail.expectedPrice 
-        : (productDetail.pricing?.day || 0);
+      const price =
+        item.itemModel === "Product"
+          ? productDetail.expectedPrice
+          : productDetail.pricing?.day || 0;
 
+      // Create the order with paymentMethod persisted
       const order = await Order.create({
         buyerId: session.user.id,
         sellerId: productDetail.sellerId,
@@ -44,18 +54,29 @@ export async function POST(req: NextRequest) {
         orderType: item.itemModel === "Product" ? "purchase" : "rent",
         totalAmount: price,
         status: "pending",
+        paymentMethod,
       });
       orders.push(order);
+
+      // ─── KEY CHANGE: Mark item as sold/rented so it disappears from search ───
+      if (item.itemModel === "Product") {
+        await Product.findByIdAndUpdate(item.itemId, { status: "sold" });
+      } else if (item.itemModel === "RentItem") {
+        await RentItem.findByIdAndUpdate(item.itemId, { status: "rented" });
+      }
     }
 
     // 3. Clear the cart
     await CartItem.deleteMany({ userId: session.user.id });
 
-    return NextResponse.json({ 
-      message: "Checkout successful", 
-      orderCount: orders.length,
-      orders 
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        message: "Checkout successful",
+        orderCount: orders.length,
+        orders,
+      },
+      { status: 201 }
+    );
   } catch (error: any) {
     console.error("Checkout error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { MessageCircle, Mail } from "lucide-react";
 
 interface ProductActionsProps {
   productId: string;
@@ -12,6 +11,8 @@ interface ProductActionsProps {
   sellerEmail: string;
   price: number;
   status: string;
+  title: string;
+  image: string;
 }
 
 export function ProductActions({
@@ -21,23 +22,20 @@ export function ProductActions({
   sellerEmail,
   price,
   status,
+  title,
+  image,
 }: ProductActionsProps) {
   const { data: session } = useSession();
   const router = useRouter();
   const [actionLoading, setActionLoading] = useState(false);
-  const [chatLoading, setChatLoading] = useState(false);
-  const [cartLoading, setCartLoading] = useState(false);
-  const [cartSuccess, setCartSuccess] = useState(false);
+  const [cartState, setCartState] = useState<"idle" | "loading" | "success">("idle");
 
-  const isSoldOut = status !== "active";
+  const isSoldOut   = status !== "active";
   const isOwnProduct = session?.user?.id === sellerId;
 
+  /* ── Buy / Rent ─────────────────────────── */
   const handleAction = async () => {
-    if (!session) {
-      alert("Please sign in first");
-      router.push("/login");
-      return;
-    }
+    if (!session) { router.push("/login"); return; }
     setActionLoading(true);
     try {
       const res = await fetch("/api/orders", {
@@ -51,12 +49,8 @@ export function ProductActions({
           orderType: type === "sell" ? "buy" : "rent",
         }),
       });
-
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.error || "Failed to process request");
-      }
-      alert(type === "sell" ? "Order placed successfully!" : "Rental requested successfully!");
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Failed"); }
+      alert(type === "sell" ? "Order placed!" : "Rental requested!");
       router.push("/dashboard");
     } catch (err: any) {
       alert(err.message);
@@ -65,46 +59,15 @@ export function ProductActions({
     }
   };
 
-  const handleChat = async () => {
-    if (!session) {
-      alert("Please sign in first");
-      router.push("/login");
-      return;
-    }
-    setChatLoading(true);
-    try {
-      const res = await fetch('/api/conversation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itemId: productId, sellerId }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        alert(data.error || 'Failed to start chat');
-        return;
-      }
-
-      const convo = await res.json();
-      router.push(`/chat/${convo._id}`);
-    } catch (err) {
-      console.error('Chat button error:', err);
-      alert('Could not start conversation. Please try again.');
-    } finally {
-      setChatLoading(false);
-    }
-  };
-
+  /* ── Add to Cart ─────────────────────────── */
   const handleAddToCart = async () => {
     if (!session) {
-      alert("Please sign in first");
+      alert("Please sign in to add items to your cart");
       router.push("/login");
       return;
     }
-    
-    setCartLoading(true);
-    setCartSuccess(false);
-    
+
+    setCartState("loading");
     try {
       const res = await fetch("/api/cart", {
         method: "POST",
@@ -119,80 +82,126 @@ export function ProductActions({
         const d = await res.json();
         throw new Error(d.error || "Failed to add to cart");
       }
-      
-      setCartSuccess(true);
-      // Automatically hide success message after 3 seconds
-      setTimeout(() => setCartSuccess(false), 3000);
+
+      window.dispatchEvent(new Event("cartUpdated"));
+      setCartState("success");
+      setTimeout(() => setCartState("idle"), 2500);
     } catch (err: any) {
       alert(err.message);
-    } finally {
-      setCartLoading(false);
+      setCartState("idle");
     }
   };
 
+  /* ── Own listing ─────────────────────────── */
   if (isOwnProduct) {
     return (
-      <div className="bg-blue-500/10 border border-blue-500/20 text-blue-400 p-4 rounded-xl text-center font-medium">
-        This is your own listing
+      <div style={{ background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.2)", borderRadius: "16px", padding: "18px 24px", textAlign: "center" }}>
+        <span style={{ fontSize: "13px", fontWeight: 600, color: "#60a5fa" }}>📌 This is your own listing</span>
       </div>
     );
   }
 
+  /* ── Sold out ────────────────────────────── */
   if (isSoldOut) {
     return (
-      <button 
-        disabled
-        className="w-full bg-[#111] text-slate-500 font-bold py-4 px-8 rounded-xl cursor-not-allowed border border-[#222]"
-      >
-        ❌ Already {type === "sell" ? "Sold" : "Rented"}
-      </button>
+      <div style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.18)", borderRadius: "16px", padding: "18px 24px", textAlign: "center" }}>
+        <span style={{ fontSize: "14px", fontWeight: 700, color: "#f87171" }}>❌ Already {type === "sell" ? "Sold" : "Rented"}</span>
+        <p style={{ margin: "6px 0 0", fontSize: "12px", color: "#64748b" }}>This item is no longer available.</p>
+      </div>
     );
   }
 
+  /* ── Active listing ──────────────────────── */
   return (
-    <div className="flex flex-col gap-4">
-      {cartSuccess && (
-        <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-3 rounded-lg text-center text-sm font-medium animate-in fade-in slide-in-from-top-2 duration-300">
-          ✨ Added to cart successfully!
+    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+
+      {/* Success toast */}
+      {cartState === "success" && (
+        <div style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.25)", borderRadius: "12px", padding: "12px 18px", display: "flex", alignItems: "center", gap: "10px" }}>
+          <span style={{ fontSize: "1rem" }}>✨</span>
+          <span style={{ fontSize: "13px", fontWeight: 600, color: "#34d399" }}>Added to cart successfully!</span>
         </div>
       )}
-      
-      {/* Row 1: Primary Purchase Actions */}
-      <div className="flex gap-4">
-        <button 
+
+      {/* Primary row */}
+      <div style={{ display: "flex", gap: "10px" }}>
+        {/* Buy / Rent */}
+        <button
           onClick={handleAction}
-          disabled={actionLoading || cartLoading}
-          className="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-extrabold py-4 px-8 rounded-xl shadow-[0_0_20px_rgba(245,158,11,0.2)] transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+          disabled={actionLoading}
+          style={{
+            flex: 1,
+            padding: "16px 24px",
+            borderRadius: "14px",
+            border: "none",
+            cursor: actionLoading ? "not-allowed" : "pointer",
+            fontWeight: 800,
+            fontSize: "15px",
+            letterSpacing: "0.02em",
+            background: actionLoading
+              ? "rgba(245,158,11,0.4)"
+              : "linear-gradient(135deg,#f59e0b,#d97706)",
+            color: "#000",
+            boxShadow: "0 4px 20px rgba(245,158,11,0.25)",
+            transition: "transform 0.15s, box-shadow 0.15s",
+          }}
+          onMouseEnter={e => { if (!actionLoading) { (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 30px rgba(245,158,11,0.4)"; }}}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "none"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(245,158,11,0.25)"; }}
         >
-          {actionLoading ? "Processing..." : (type === "sell" ? "Buy Now" : "Request Rental")}
+          {actionLoading ? "Processing…" : type === "sell" ? "⚡ Buy Now" : "📅 Request Rental"}
         </button>
-        <button 
+
+        {/* Add to cart */}
+        <button
           onClick={handleAddToCart}
-          disabled={actionLoading || cartLoading}
-          className={`flex-[0.3] flex items-center justify-center bg-[#111] hover:bg-[#1a1a1a] border border-[#333] text-white font-bold py-4 px-4 rounded-xl transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-70 ${cartSuccess ? 'border-emerald-500 text-emerald-500' : ''}`}
-          title="Add to Cart"
+          disabled={cartState === "loading"}
+          style={{
+            flex: 1,
+            padding: "16px 24px",
+            borderRadius: "14px",
+            fontWeight: 700,
+            fontSize: "15px",
+            cursor: "pointer",
+            background: cartState === "success"
+              ? "rgba(16,185,129,0.12)"
+              : "rgba(255,255,255,0.04)",
+            color: cartState === "success" ? "#34d399" : "#e2e8f0",
+            border: cartState === "success"
+              ? "1px solid rgba(16,185,129,0.3)"
+              : "1px solid rgba(255,255,255,0.1)",
+            transition: "background 0.2s, border-color 0.2s, transform 0.15s",
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)"; (e.currentTarget as HTMLElement).style.background = cartState === "success" ? "rgba(16,185,129,0.18)" : "rgba(255,255,255,0.08)"; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "none"; (e.currentTarget as HTMLElement).style.background = cartState === "success" ? "rgba(16,185,129,0.12)" : "rgba(255,255,255,0.04)"; }}
         >
-          {cartLoading ? "..." : (cartSuccess ? "✓" : "🛒")}
+          {cartState === "success" ? "✓ In Cart" : "🛒 Add to Cart"}
         </button>
       </div>
 
-      {/* Row 2: Communication Actions */}
-      <div className="flex gap-4">
-        <button 
-          onClick={handleChat}
-          disabled={chatLoading}
-          className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 px-8 rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.2)] transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
-        >
-          <MessageCircle size={20} />
-          {chatLoading ? "connecting..." : "Chat Now"}
-        </button>
-        <a 
-          href={`mailto:${sellerEmail}?subject=Interested in item id: ${productId}`}
-          className="flex-1 flex items-center justify-center bg-[#111] hover:bg-[#1a1a1a] border border-[#333] text-white font-bold py-4 px-4 rounded-xl transition-all hover:scale-[1.02] active:scale-95 text-center"
-        >
-          <Mail size={18} className="mr-2" /> Contact Email
-        </a>
-      </div>
+      {/* Secondary — Email seller */}
+      <a
+        href={`mailto:${sellerEmail}?subject=Interested in: ${encodeURIComponent(title)}`}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "8px",
+          padding: "13px 24px",
+          borderRadius: "14px",
+          border: "1px solid rgba(255,255,255,0.07)",
+          background: "rgba(255,255,255,0.02)",
+          color: "#64748b",
+          fontSize: "13px",
+          fontWeight: 600,
+          textDecoration: "none",
+          transition: "color 0.2s, background 0.2s",
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#94a3b8"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)"; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "#64748b"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.02)"; }}
+      >
+        ✉️ Email the seller
+      </a>
+
     </div>
   );
 }
