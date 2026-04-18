@@ -1,9 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Order from "@/models/Order";
-import Product from "@/models/Product";
-import RentItem from "@/models/RentItem";
 import { auth } from "@/lib/auth";
+
+/**
+ * PATCH /api/orders/:id
+ *
+ * Generic order update — scoped to cancellation only.
+ *
+ * The full Razorpay COD → UPI on delivery flow uses dedicated sub-routes:
+ *   PATCH /api/orders/:id/start-delivery        → pending → out_for_delivery
+ *   POST  /api/orders/:id/generate-payment-link → creates Razorpay payment link
+ *   POST  /api/webhook/razorpay                 → sets status "paid" (Razorpay only)
+ *   PATCH /api/orders/:id/complete              → paid → completed (marks item sold)
+ *
+ * Only "cancelled" is accepted here to prevent any client from bypassing
+ * the payment verification gate.
+ */
+const ALLOWED_STATUSES = ["cancelled"] as const;
+type AllowedStatus = (typeof ALLOWED_STATUSES)[number];
 
 export async function PATCH(
   req: NextRequest,
@@ -12,7 +27,8 @@ export async function PATCH(
   try {
     const { id } = await params;
     const session = await auth();
-    if (!session || !session.user) {
+
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -24,30 +40,40 @@ export async function PATCH(
       return NextResponse.json({ error: "Status is required" }, { status: 400 });
     }
 
-    // Find the order
+    // Strict allowlist — only "cancelled" is permitted here
+    if (!ALLOWED_STATUSES.includes(status as AllowedStatus)) {
+      return NextResponse.json(
+        {
+          error: `Status "${status}" cannot be set via this endpoint.`,
+          hint: "Use dedicated routes: /start-delivery, /generate-payment-link, /complete",
+        },
+        { status: 400 }
+      );
+    }
+
     const order = await Order.findById(id);
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    // Only allow seller or buyer (depending on status) to update?
-    // For now, let's keep it simple: seller updates status to 'completed'
-    if (session.user.id !== order.sellerId.toString() && session.user.id !== order.buyerId.toString()) {
-       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    // Only seller or buyer can cancel
+    if (
+      session.user.id !== order.sellerId.toString() &&
+      session.user.id !== order.buyerId.toString()
+    ) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    const previousStatus = order.status;
-    order.status = status;
+    // Cannot cancel after payment has been confirmed
+    if (order.status === "paid" || order.status === "completed") {
+      return NextResponse.json(
+        { error: `Cannot cancel an order that is already "${order.status}"` },
+        { status: 409 }
+      );
+    }
+
+    order.status = "cancelled";
     await order.save();
-
-    // If order is marked 'completed', update the item status
-    if (status === "completed" && previousStatus !== "completed") {
-      if (order.itemModel === "Product") {
-        await Product.findByIdAndUpdate(order.itemId, { status: "sold" });
-      } else if (order.itemModel === "RentItem") {
-        await RentItem.findByIdAndUpdate(order.itemId, { status: "rented" });
-      }
-    }
 
     return NextResponse.json(order);
   } catch (error: any) {

@@ -180,7 +180,7 @@ export default function CartClient() {
 
   /* ── SUCCESS ──────────────────────────────────── */
   if (step === "success") {
-    const methodLabel = paymentMethod === "cod" ? "Cash on Delivery" : paymentMethod === "upi" ? "UPI / QR" : "Card Payment";
+    const methodLabel = "Pay on Delivery (Cash / UPI)";
     return (
       <div style={{ minHeight: "100vh", backgroundColor: "#080808", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 24px" }}>
         <style>{globalStyles}</style>
@@ -229,33 +229,13 @@ export default function CartClient() {
       {
         id: "cod" as PaymentMethod,
         icon: <Banknote size={28} color="#10b981" />,
-        title: "Cash on Delivery",
-        subtitle: "Pay directly to the seller when you pick up or receive the item",
-        badge: "Most Popular",
+        title: "Pay on Delivery (Cash / UPI)",
+        subtitle: "Pay the seller directly when you receive the item. The seller will generate a secure Razorpay QR code for UPI/Card, or you can pay in cash.",
+        badge: "Recommended",
         badgeColor: "#10b981",
         accentColor: "rgba(16,185,129,0.15)",
         borderColor: "rgba(16,185,129,0.35)",
-      },
-      {
-        id: "upi" as PaymentMethod,
-        icon: <Smartphone size={28} color="#818cf8" />,
-        title: "UPI / QR Code",
-        subtitle: "Pay instantly via Google Pay, PhonePe, Paytm, or any UPI app",
-        badge: "Instant",
-        badgeColor: "#818cf8",
-        accentColor: "rgba(129,140,248,0.15)",
-        borderColor: "rgba(129,140,248,0.35)",
-      },
-      {
-        id: "card" as PaymentMethod,
-        icon: <CreditCard size={28} color="#f59e0b" />,
-        title: "Debit / Credit Card",
-        subtitle: "Secure card payment via Razorpay or Stripe gateway",
-        badge: "Secure",
-        badgeColor: "#f59e0b",
-        accentColor: "rgba(245,158,11,0.15)",
-        borderColor: "rgba(245,158,11,0.35)",
-      },
+      }
     ];
 
     return (
@@ -318,35 +298,13 @@ export default function CartClient() {
             })}
           </div>
 
-          {/* COD Note */}
-          {paymentMethod === "cod" && (
-            <div className="fade-item" style={{ background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.15)", borderRadius: "14px", padding: "14px 18px", marginBottom: "24px", display: "flex", gap: "10px" }}>
-              <span style={{ fontSize: "1rem", flexShrink: 0 }}>💡</span>
-              <p style={{ margin: 0, fontSize: "12px", color: "#475569", lineHeight: 1.7 }}>
-                For Cash on Delivery, arrange exact amount with the seller before meeting. Keep your order reference handy.
-              </p>
-            </div>
-          )}
-
-          {/* UPI Note */}
-          {paymentMethod === "upi" && (
-            <div className="fade-item" style={{ background: "rgba(129,140,248,0.05)", border: "1px solid rgba(129,140,248,0.15)", borderRadius: "14px", padding: "14px 18px", marginBottom: "24px", display: "flex", gap: "10px" }}>
-              <span style={{ fontSize: "1rem", flexShrink: 0 }}>📱</span>
-              <p style={{ margin: 0, fontSize: "12px", color: "#475569", lineHeight: 1.7 }}>
-                After placing your order, the seller will share their UPI ID or QR code with you via campus email.
-              </p>
-            </div>
-          )}
-
-          {/* Card Note */}
-          {paymentMethod === "card" && (
-            <div className="fade-item" style={{ background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.15)", borderRadius: "14px", padding: "14px 18px", marginBottom: "24px", display: "flex", gap: "10px" }}>
-              <span style={{ fontSize: "1rem", flexShrink: 0 }}>🔒</span>
-              <p style={{ margin: 0, fontSize: "12px", color: "#475569", lineHeight: 1.7 }}>
-                Card payment gateway integration coming soon. For now, please coordinate payment directly with the seller.
-              </p>
-            </div>
-          )}
+          {/* Flow Notice */}
+          <div className="fade-item" style={{ background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.15)", borderRadius: "14px", padding: "14px 18px", marginBottom: "24px", display: "flex", gap: "10px" }}>
+            <span style={{ fontSize: "1rem", flexShrink: 0 }}>💡</span>
+            <p style={{ margin: 0, fontSize: "12px", color: "#475569", lineHeight: 1.7 }}>
+              When the seller delivers your item, they will show you a Razorpay QR code on their phone. You can scan it to pay securely via UPI, or hand them cash.
+            </p>
+          </div>
 
           {/* Order total preview */}
           <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "16px", padding: "16px 20px", marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -388,9 +346,7 @@ export default function CartClient() {
   /* ── REVIEW STEP ─────────────────────────────── */
   if (step === "review") {
     const methodMeta: Record<string, { label: string; icon: string; color: string }> = {
-      cod:  { label: "Cash on Delivery", icon: "💵", color: "#10b981" },
-      upi:  { label: "UPI / QR Code",    icon: "📱", color: "#818cf8" },
-      card: { label: "Card Payment",     icon: "💳", color: "#f59e0b" },
+      cod:  { label: "Pay on Delivery (Cash / UPI)", icon: "💵", color: "#10b981" },
     };
     const method = paymentMethod ? methodMeta[paymentMethod] : null;
 

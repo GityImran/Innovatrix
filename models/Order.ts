@@ -7,8 +7,17 @@ export interface IOrder extends Document {
   itemModel: "Product" | "RentItem";
   orderType: "purchase" | "rent";
   totalAmount: number;
-  status: "pending" | "completed" | "cancelled";
-  paymentMethod: string;
+  /**
+   * Status flow for COD → UPI on delivery:
+   * pending → out_for_delivery → paid → completed
+   * cancelled is a terminal state reachable from pending/out_for_delivery.
+   */
+  status: "pending" | "out_for_delivery" | "paid" | "completed" | "cancelled";
+  paymentMethod: "cod" | "upi" | "online" | "cash";
+  /** Razorpay Payment Link ID — set when seller generates the QR link */
+  paymentLinkId: string | null;
+  /** Razorpay Payment ID — set when the webhook confirms payment */
+  razorpayPaymentId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -31,10 +40,19 @@ const OrderSchema = new Schema<IOrder>(
     totalAmount: { type: Number, required: true },
     status: {
       type: String,
-      enum: ["pending", "completed", "cancelled"],
+      // Extended for Razorpay COD → UPI on delivery flow
+      enum: ["pending", "out_for_delivery", "paid", "completed", "cancelled"],
       default: "pending",
     },
-    paymentMethod: { type: String, default: "cash" },
+    paymentMethod: {
+      type: String,
+      enum: ["cod", "upi", "online", "cash"],
+      default: "cod",
+    },
+    /** Razorpay Payment Link ID stored when seller generates QR at delivery */
+    paymentLinkId: { type: String, default: null },
+    /** Razorpay Payment ID stored when webhook confirms payment */
+    razorpayPaymentId: { type: String, default: null },
   },
   { timestamps: true }
 );
