@@ -17,6 +17,7 @@ import React, {
 import { useRouter, useParams } from "next/navigation";
 import { uploadImage } from "@/lib/upload";
 import { FairPriceChecker } from "@/app/components/FairPriceChecker/FairPriceChecker";
+import { checkCondition, AIConditionResponse } from "@/lib/aiCondition";
 // import {
 //   getProductById,
 //   updateProduct,
@@ -82,8 +83,33 @@ export default function EditProductPage() {
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [aiResult, setAiResult] = useState<AIConditionResponse | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string>("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Debounced AI Condition Check
+  useEffect(() => {
+    if (!uploadedImageUrl || !condition) {
+      setAiResult(null);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsVerifying(true);
+      try {
+        const result = await checkCondition(uploadedImageUrl, condition);
+        setAiResult(result);
+      } catch (err) {
+        console.error("AI Verification failed:", err);
+      } finally {
+        setIsVerifying(false);
+      }
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  }, [uploadedImageUrl, condition]);
 
   /* ── Fetch from API ── */
   useEffect(() => {
@@ -142,6 +168,11 @@ export default function EditProductPage() {
   const addFiles = useCallback(async (files: FileList | null) => {
     if (!files) return;
     const validFiles = Array.from(files).filter((f) => f.type.startsWith("image/"));
+
+    // Reset AI result when images change
+    setAiResult(null);
+    setUploadedImageUrl("");
+
     const previews: ImagePreview[] = await Promise.all(
       validFiles.map(async (file) => ({
         id: `${Date.now()}-${Math.random()}`,
@@ -151,10 +182,31 @@ export default function EditProductPage() {
     );
     setImages((prev) => [...prev, ...previews]);
     setErrors((p) => ({ ...p, images: undefined }));
-  }, []);
 
-  const removeImage = (imgId: string) =>
-    setImages((prev) => prev.filter((i) => i.id !== imgId));
+    // Upload first image to Cloudinary for AI verification
+    if (validFiles.length > 0 || images.length > 0) {
+      const fileToUpload = validFiles.length > 0 ? validFiles[0] : images[0].file;
+      if (fileToUpload) {
+        try {
+          const uploadRes = await uploadImage(fileToUpload);
+          setUploadedImageUrl(uploadRes.imageUrl);
+        } catch (err) {
+          console.error("Failed to upload image for AI verification:", err);
+        }
+      }
+    }
+  }, [images]);
+
+  const removeImage = (imgId: string) => {
+    setImages((prev) => {
+      const newImages = prev.filter((i) => i.id !== imgId);
+      if (newImages.length === 0 || imgId === prev[0].id) {
+        setAiResult(null);
+        setUploadedImageUrl("");
+      }
+      return newImages;
+    });
+  };
 
   const onDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -201,12 +253,25 @@ export default function EditProductPage() {
     setSubmitting(true);
     try {
       let imageData = { url: "", public_id: "" };
+      let firstImageUrl = "";
 
       if (images[0].isExisting) {
         imageData = { url: images[0].dataUrl, public_id: images[0].publicId || "" };
+        firstImageUrl = images[0].dataUrl;
       } else if (images[0].file) {
-        const uploadRes = await uploadImage(images[0].file);
-        imageData = { url: uploadRes.imageUrl, public_id: uploadRes.publicId };
+        // Use already uploaded URL if available, else upload now
+        firstImageUrl = uploadedImageUrl;
+        if (!firstImageUrl) {
+          const uploadRes = await uploadImage(images[0].file);
+          firstImageUrl = uploadRes.imageUrl;
+        }
+        imageData = { url: firstImageUrl, public_id: images[0].id || "" };
+      }
+
+      // AI Condition Verification (use state or call if missing)
+      let finalAiResult = aiResult;
+      if (!finalAiResult && firstImageUrl && condition) {
+        finalAiResult = await checkCondition(firstImageUrl, condition);
       }
 
       const res = await fetch(`/api/seller/products/${id}`, {
@@ -220,6 +285,11 @@ export default function EditProductPage() {
           originalPrice: originalPrice ? Number(originalPrice) : undefined,
           expectedPrice: Number(expectedPrice),
           image: imageData,
+          aiCondition: finalAiResult ? {
+            detected: finalAiResult.detectedCondition,
+            mismatch: finalAiResult.mismatch,
+            aiFailed: finalAiResult.aiFailed,
+          } : undefined,
           isUrgent,
           isBundle,
           bundleTitle: isBundle ? bundleTitle.trim() : undefined,
@@ -346,10 +416,14 @@ export default function EditProductPage() {
             ] as const).map(({ val, label, desc, color }) => (
               <label key={val} style={{ ...s.radioCard, ...(condition === val ? { borderColor: color, backgroundColor: color + "12" } : {}) }}>
                 <input type="radio" name="condition" value={val} checked={condition === val}
-                  onChange={() => { setCondition(val); setErrors((p) => ({ ...p, condition: undefined })); }}
+                  onChange={() => {
+                    setCondition(val);
+                    setErrors((p) => ({ ...p, condition: undefined }));
+                    setAiResult(null); // Reset AI result when condition changes
+                  }}
                   style={{ display: "none" }}
                 />
-                <span style={{ ...s.radioDot, ...(condition === val ? { backgroundColor: color, borderColor: color } : {}) }} />
+                <span style={{ ...s.radioDot, ...(condition === val ? { backgroundColor: color, borderColor: color, boxShadow: `0 0 0 3px ${color}30` } : {}) }} />
                 <div>
                   <p style={{ ...s.radioLabel, ...(condition === val ? { color } : {}) }}>{label}</p>
                   <p style={s.radioDesc}>{desc}</p>
@@ -358,6 +432,40 @@ export default function EditProductPage() {
             ))}
           </div>
           {errors.condition && <p style={s.errMsg}>{errors.condition}</p>}
+
+          {/* AI Condition Feedback for Seller */}
+          {(aiResult || isVerifying) && (
+            <div style={{
+              marginTop: "1rem",
+              padding: "1rem",
+              borderRadius: "10px",
+              border: `1px solid ${isVerifying ? "#3b82f6" : aiResult?.aiFailed ? "#4b5563" : aiResult?.mismatch ? "#f59e0b" : "#10b981"}`,
+              backgroundColor: `${isVerifying ? "#3b82f610" : aiResult?.aiFailed ? "#4b556310" : aiResult?.mismatch ? "#f59e0b10" : "#10b98110"}`,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
+                <span style={{ fontSize: "1.1rem" }}>
+                  {isVerifying ? "🔍" : aiResult?.aiFailed ? "⚠️" : aiResult?.mismatch ? "⚠️" : "✅"}
+                </span>
+                <p style={{
+                  margin: 0,
+                  fontSize: "0.9rem",
+                  fontWeight: 700,
+                  color: isVerifying ? "#3b82f6" : aiResult?.aiFailed ? "#94a3b8" : aiResult?.mismatch ? "#f59e0b" : "#10b981",
+                }}>
+                  {isVerifying ? "Verifying condition…" : aiResult?.aiFailed ? "AI verification unavailable" : aiResult?.mismatch ? "Please review the condition" : "Condition looks accurate"}
+                </p>
+              </div>
+              <p style={{ margin: 0, fontSize: "0.85rem", color: "#cbd5e1", lineHeight: 1.5 }}>
+                {isVerifying
+                  ? "Analyzing image clarity and wear patterns..."
+                  : aiResult?.aiFailed
+                    ? "We couldn’t verify the item automatically. Your selected condition will be used."
+                    : aiResult?.mismatch
+                      ? `The item appears to be in "${aiResult?.detectedCondition}" condition, but you selected "${condition}". You may want to update the condition to match the item more accurately.`
+                      : "The item appears to match the condition you selected."}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* ── Pricing ── */}

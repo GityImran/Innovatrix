@@ -14,6 +14,11 @@ export interface IProduct extends Document {
     url: string;
     public_id: string;
   };
+  aiCondition?: {
+    detected: string;
+    mismatch: boolean;
+    aiFailed: boolean;
+  };
   isUrgent: boolean;
   isBundle: boolean;
   bundleTitle?: string;
@@ -36,6 +41,11 @@ const ProductSchema = new Schema<IProduct>(
     image: {
       url: { type: String, required: true },
       public_id: { type: String, required: true },
+    },
+    aiCondition: {
+      detected: { type: String },
+      mismatch: { type: Boolean, default: false },
+      aiFailed: { type: Boolean, default: false },
     },
     isUrgent: { type: Boolean, default: false },
     isBundle: { type: Boolean, default: false },

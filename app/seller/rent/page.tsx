@@ -9,12 +9,14 @@ import React, {
   useState,
   useRef,
   useCallback,
+  useEffect,
   DragEvent,
   ChangeEvent,
   FormEvent,
 } from "react";
 import { useRouter } from "next/navigation";
 import { uploadImage } from "@/lib/upload";
+import { checkCondition, AIConditionResponse } from "@/lib/aiCondition";
 
 type Condition = "new" | "good" | "used";
 type Category =
@@ -71,8 +73,33 @@ export default function RentItemPage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [isDragging, setIsDragging] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [aiResult, setAiResult] = useState<AIConditionResponse | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string>("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Debounced AI Condition Check
+  useEffect(() => {
+    if (!uploadedImageUrl || !condition) {
+      setAiResult(null);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsVerifying(true);
+      try {
+        const result = await checkCondition(uploadedImageUrl, condition);
+        setAiResult(result);
+      } catch (err) {
+        console.error("AI Verification failed:", err);
+      } finally {
+        setIsVerifying(false);
+      }
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  }, [uploadedImageUrl, condition]);
 
   // ── helpers ──────────────────────────────────────────────────────────────
   const clearErr = (key: keyof FormErrors) =>
@@ -88,6 +115,11 @@ export default function RentItemPage() {
   const addFiles = useCallback(async (files: FileList | null) => {
     if (!files) return;
     const valid = Array.from(files).filter((f) => f.type.startsWith("image/"));
+
+    // Reset AI result when images change
+    setAiResult(null);
+    setUploadedImageUrl("");
+
     const previews: ImagePreview[] = await Promise.all(
       valid.map(async (file) => ({
         id: `${Date.now()}-${Math.random()}`,
@@ -97,10 +129,29 @@ export default function RentItemPage() {
     );
     setImages((prev) => [...prev, ...previews]);
     clearErr("images");
-  }, []);
 
-  const removeImage = (id: string) =>
-    setImages((prev) => prev.filter((i) => i.id !== id));
+    // Upload first image to Cloudinary for AI verification
+    if (valid.length > 0 || images.length > 0) {
+      const fileToUpload = valid.length > 0 ? valid[0] : images[0].file;
+      try {
+        const uploadRes = await uploadImage(fileToUpload);
+        setUploadedImageUrl(uploadRes.imageUrl);
+      } catch (err) {
+        console.error("Failed to upload image for AI verification:", err);
+      }
+    }
+  }, [images]);
+
+  const removeImage = (id: string) => {
+    setImages((prev) => {
+      const newImages = prev.filter((i) => i.id !== id);
+      if (newImages.length === 0 || id === prev[0].id) {
+        setAiResult(null);
+        setUploadedImageUrl("");
+      }
+      return newImages;
+    });
+  };
 
   const onDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -153,8 +204,18 @@ export default function RentItemPage() {
     setSubmitting(true);
 
     try {
-      // 1. Upload first image to Cloudinary
-      const uploadRes = await uploadImage(images[0].file);
+      // 1. Upload first image to Cloudinary (if not already uploaded)
+      let firstImageUrl = uploadedImageUrl;
+      if (!firstImageUrl && images.length > 0) {
+        const uploadRes = await uploadImage(images[0].file);
+        firstImageUrl = uploadRes.imageUrl;
+      }
+
+      // 2. AI Condition Verification (use state or call if missing)
+      let finalAiResult = aiResult;
+      if (!finalAiResult && firstImageUrl && condition) {
+        finalAiResult = await checkCondition(firstImageUrl, condition);
+      }
 
       const payload = {
         category,
@@ -172,9 +233,14 @@ export default function RentItemPage() {
         },
         securityDeposit: securityDeposit ? Number(securityDeposit) : undefined,
         image: {
-          url: uploadRes.imageUrl,
-          public_id: uploadRes.publicId,
+          url: firstImageUrl,
+          public_id: images[0].id, // Using existing ID as placeholder or getting from uploadRes
         },
+        aiCondition: finalAiResult ? {
+          detected: finalAiResult.detectedCondition,
+          mismatch: finalAiResult.mismatch,
+          aiFailed: finalAiResult.aiFailed,
+        } : undefined,
         isUrgent,
         allowNegotiation,
         status: "active" as const,
@@ -277,7 +343,10 @@ export default function RentItemPage() {
                   name="condition"
                   value={val}
                   checked={condition === val}
-                  onChange={() => setCondition(val)}
+                  onChange={() => {
+                    setCondition(val);
+                    setAiResult(null); // Reset AI result when condition changes
+                  }}
                   style={{ display: "none" }}
                 />
                 <span
@@ -295,6 +364,40 @@ export default function RentItemPage() {
               </label>
             ))}
           </div>
+
+          {/* AI Condition Feedback for Seller */}
+          {(aiResult || isVerifying) && (
+            <div style={{
+              marginTop: "1rem",
+              padding: "1rem",
+              borderRadius: "10px",
+              border: `1px solid ${isVerifying ? "#3b82f6" : aiResult?.aiFailed ? "#4b5563" : aiResult?.mismatch ? "#f59e0b" : "#10b981"}`,
+              backgroundColor: `${isVerifying ? "#3b82f610" : aiResult?.aiFailed ? "#4b556310" : aiResult?.mismatch ? "#f59e0b10" : "#10b98110"}`,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
+                <span style={{ fontSize: "1.1rem" }}>
+                  {isVerifying ? "🔍" : aiResult?.aiFailed ? "⚠️" : aiResult?.mismatch ? "⚠️" : "✅"}
+                </span>
+                <p style={{
+                  margin: 0,
+                  fontSize: "0.9rem",
+                  fontWeight: 700,
+                  color: isVerifying ? "#3b82f6" : aiResult?.aiFailed ? "#94a3b8" : aiResult?.mismatch ? "#f59e0b" : "#10b981",
+                }}>
+                  {isVerifying ? "Verifying condition…" : aiResult?.aiFailed ? "AI verification unavailable" : aiResult?.mismatch ? "Please review the condition" : "Condition looks accurate"}
+                </p>
+              </div>
+              <p style={{ margin: 0, fontSize: "0.85rem", color: "#cbd5e1", lineHeight: 1.5 }}>
+                {isVerifying
+                  ? "Analyzing image clarity and wear patterns..."
+                  : aiResult?.aiFailed
+                    ? "We couldn’t verify the item automatically. Your selected condition will be used."
+                    : aiResult?.mismatch
+                      ? `The item appears to be in "${aiResult?.detectedCondition}" condition, but you selected "${condition}". You may want to update the condition to match the item more accurately.`
+                      : "The item appears to match the condition you selected."}
+              </p>
+            </div>
+          )}
         </Section>
 
         {/* ── PRICING ── */}

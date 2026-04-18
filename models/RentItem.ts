@@ -21,6 +21,11 @@ export interface IRentItem extends Document {
     url: string;
     public_id: string;
   };
+  aiCondition?: {
+    detected: string;
+    mismatch: boolean;
+    aiFailed: boolean;
+  };
   isUrgent: boolean;
   allowNegotiation: boolean;
   status: "active" | "rented" | "unavailable";
@@ -49,6 +54,11 @@ const RentItemSchema = new Schema<IRentItem>(
     image: {
       url: { type: String, required: true },
       public_id: { type: String, required: true },
+    },
+    aiCondition: {
+      detected: { type: String },
+      mismatch: { type: Boolean, default: false },
+      aiFailed: { type: Boolean, default: false },
     },
     isUrgent: { type: Boolean, default: false },
     allowNegotiation: { type: Boolean, default: false },

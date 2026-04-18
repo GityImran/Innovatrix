@@ -145,13 +145,58 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
             <div className="grid grid-cols-2 gap-4 mb-8">
               <div className="bg-slate-900 rounded-lg p-4 border border-slate-800">
                 <p className="text-xs text-slate-500 mb-1 uppercase tracking-wider font-semibold">Condition</p>
-                <p className="font-medium text-slate-200 uppercase">{product.condition}</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-slate-200 uppercase">{product.condition}</p>
+                  {product.aiCondition && (
+                    <span
+                      title={product.aiCondition.aiFailed ? "Condition not verified" : product.aiCondition.mismatch ? "Condition may differ from listing" : "Condition verified"}
+                      className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase ${
+                        product.aiCondition.aiFailed ? "bg-slate-700 text-slate-400" :
+                        product.aiCondition.mismatch ? "bg-amber-500/20 text-amber-500 border border-amber-500/30" :
+                        "bg-emerald-500/20 text-emerald-500 border border-emerald-500/30"
+                      }`}
+                    >
+                      {product.aiCondition.aiFailed ? "Not Verified" : product.aiCondition.mismatch ? "Verification Warning ⚠️" : "AI Verified ✔️"}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="bg-slate-900 rounded-lg p-4 border border-slate-800">
                 <p className="text-xs text-slate-500 mb-1 uppercase tracking-wider font-semibold">Seller Domain</p>
                 <p className="font-medium text-amber-500">{product.sellerDomain}</p>
               </div>
             </div>
+
+            {/* AI Condition Feedback for Buyer */}
+            {product.aiCondition && (
+              <div className={`mb-8 p-4 rounded-xl border ${
+                product.aiCondition.aiFailed ? "bg-slate-900/50 border-slate-800" :
+                product.aiCondition.mismatch ? "bg-amber-500/5 border-amber-500/20" :
+                "bg-emerald-500/5 border-emerald-500/20"
+              }`}>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-lg">
+                    {product.aiCondition.aiFailed ? "ℹ️" : product.aiCondition.mismatch ? "⚠️" : "✅"}
+                  </span>
+                  <p className={`font-bold text-sm ${
+                    product.aiCondition.aiFailed ? "text-slate-400" :
+                    product.aiCondition.mismatch ? "text-amber-500" :
+                    "text-emerald-500"
+                  }`}>
+                    {product.aiCondition.aiFailed ? "Condition not verified" :
+                     product.aiCondition.mismatch ? "Condition may differ from listing" :
+                     "Condition verified"}
+                  </p>
+                </div>
+                <p className="text-sm text-slate-400 leading-relaxed">
+                  {product.aiCondition.aiFailed
+                    ? "We couldn’t verify this item automatically. Please rely on the listing details."
+                    : product.aiCondition.mismatch
+                      ? `The item appears to be in "${product.aiCondition.detected}" condition, but the seller marked it as "${product.condition}". Please review carefully before purchasing.`
+                      : "This item appears to match the seller’s description."}
+                </p>
+              </div>
+            )}
 
             {/* Fair Price Checker Integration */}
             <div className="mb-8">
