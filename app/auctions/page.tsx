@@ -28,7 +28,7 @@ async function getAuctions(userId?: string) {
     .populate("highestBidderId", "name")
     .lean();
 
-  let wonAuctions = [];
+  let wonAuctions: Record<string, unknown>[] = [];
   if (userId) {
     wonAuctions = await Auction.find({
       status: { $in: ["ended", "sold"] },

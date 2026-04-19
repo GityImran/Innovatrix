@@ -22,6 +22,8 @@ export interface IProduct extends Document {
   isUrgent: boolean;
   isBundle: boolean;
   bundleTitle?: string;
+  isTradeEnabled: boolean;
+  tradePreferences?: string[];
   status: "active" | "draft" | "sold";
   createdAt: Date;
   updatedAt: Date;
@@ -50,6 +52,8 @@ const ProductSchema = new Schema<IProduct>(
     isUrgent: { type: Boolean, default: false },
     isBundle: { type: Boolean, default: false },
     bundleTitle: { type: String },
+    isTradeEnabled: { type: Boolean, default: false },
+    tradePreferences: [{ type: String }],
     status: {
       type: String,
       enum: ["active", "draft", "sold"],

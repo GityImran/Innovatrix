@@ -18,7 +18,7 @@ export default function CategoriesNav() {
 
   const actions = [
     { name: "Requests", href: "/requests", disabled: false },
-    { name: "Trading",  href: "#",         disabled: true  },
+    { name: "Trading",  href: "/trade",     disabled: false },
     { name: "Auction",  href: "/auctions",  disabled: false },
     { name: "Sustainability", href: "/sustainability", disabled: false }
   ];
