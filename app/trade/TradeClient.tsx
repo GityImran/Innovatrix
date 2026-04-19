@@ -702,6 +702,10 @@ export default function TradeClient() {
       )}
 
       <main style={{ flex: 1, maxWidth: 1200, margin: "0 auto", width: "100%", padding: "40px 20px" }}>
+        {/* Back Button */}
+        <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#94a3b8', textDecoration: 'none', marginBottom: '24px', fontSize: '0.9rem', fontWeight: 600, transition: 'color 0.2s' }}>
+          ← Back
+        </Link>
         {/* Hero */}
         <div className="fade-up" style={{ marginBottom: 40 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>

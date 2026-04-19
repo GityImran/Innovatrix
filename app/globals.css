@@ -36,6 +36,10 @@
   padding: 0;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background-color: var(--bg-color);
   color: var(--text-color);
@@ -72,6 +76,17 @@ p {
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
+}
+
+.sidebar-spacer {
+  padding-left: 68px;
+  transition: padding-left 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  .sidebar-spacer {
+    padding-left: 0;
+  }
 }
 
 /* Base utility for dynamic animations */

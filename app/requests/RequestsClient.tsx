@@ -64,6 +64,10 @@ export default function RequestsClient({
       <style>{`.rq-post-btn:hover { transform: translateY(-2px) !important; box-shadow: 0 12px 24px rgba(245,158,11,0.35) !important; }`}</style>
       
       <main style={{ flex: 1, maxWidth: '1200px', margin: '0 auto', padding: '32px 24px', width: '100%' }}>
+        {/* Back Button */}
+        <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#94a3b8', textDecoration: 'none', marginBottom: '24px', fontSize: '0.9rem', fontWeight: 600, transition: 'color 0.2s' }}>
+          ← Back
+        </Link>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <h1 style={{ fontSize: 'clamp(2rem, 4vw, 2.75rem)', fontWeight: 900, lineHeight: 1.15, letterSpacing: '-0.02em', margin: '0 0 8px 0', background: 'linear-gradient(135deg, #fff 60%, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>

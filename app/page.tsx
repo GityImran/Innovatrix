@@ -4,6 +4,7 @@ import Hero from './components/Hero/Hero';
 import ProductCarousel from './components/ProductCarousel/ProductCarousel';
 import ProblemStatement from './components/ProblemStatement/ProblemStatement';
 import Footer from './components/Footer/Footer';
+import Sidebar from './components/Sidebar/Sidebar';
 
 import { mockTextbooks, mockElectronics } from '../lib/mockProducts';
 import { connectToDatabase } from '@/lib/mongodb';
@@ -77,10 +78,16 @@ export default async function Home() {
 
   return (
     <>
-      <Header />
-      <CategoriesNav />
-      <main>
-        <Hero />
+      {/* Dynamic Background Glowing Orbs */}
+      <div style={{ position: 'fixed', top: '-10%', left: '-10%', width: '50vw', height: '50vw', background: 'radial-gradient(circle, rgba(245,158,11,0.06) 0%, rgba(0,0,0,0) 70%)', borderRadius: '50%', zIndex: -1, pointerEvents: 'none' }}></div>
+      <div style={{ position: 'fixed', bottom: '-20%', right: '-10%', width: '60vw', height: '60vw', background: 'radial-gradient(circle, rgba(59,130,246,0.04) 0%, rgba(0,0,0,0) 70%)', borderRadius: '50%', zIndex: -1, pointerEvents: 'none' }}></div>
+
+      <Sidebar />
+      <div className="sidebar-spacer" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        <Header />
+        <CategoriesNav />
+        <main style={{ flex: 1, position: 'relative' }}>
+          <Hero />
 
         {/* Main E-commerce Layout */}
         <div id="shop" style={{ scrollMarginTop: '100px', backgroundColor: 'var(--bg-color)', minHeight: '100vh', padding: '0 0 2rem 0' }}>
@@ -88,16 +95,20 @@ export default async function Home() {
           <div style={{ position: 'relative', top: '-100px', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '40px' }}>
             {showMock ? (
               <>
-                <ProductCarousel
-                  title={isLoggedIn && college ? `Textbooks at ${college}` : 'Trending Textbooks'}
-                  products={mockTextbooks}
-                  currentUserId={session?.user?.id}
-                />
-                <ProductCarousel
-                  title={isLoggedIn && college ? `Lab & Electronics at ${college}` : 'Lab Equipment & Electronics'}
-                  products={mockElectronics}
-                  currentUserId={session?.user?.id}
-                />
+                <div id="category-lab-equipment" style={{ scrollMarginTop: '100px' }}>
+                  <ProductCarousel
+                    title={isLoggedIn && college ? `Textbooks at ${college}` : 'Trending Textbooks'}
+                    products={mockTextbooks}
+                    currentUserId={session?.user?.id}
+                  />
+                </div>
+                <div id="category-electronics" style={{ scrollMarginTop: '100px' }}>
+                  <ProductCarousel
+                    title={isLoggedIn && college ? `Lab & Electronics at ${college}` : 'Lab Equipment & Electronics'}
+                    products={mockElectronics}
+                    currentUserId={session?.user?.id}
+                  />
+                </div>
               </>
             ) : (
               categoryEntries.map(([categoryName, products]) => {
@@ -107,12 +118,13 @@ export default async function Home() {
                   : `Trending ${capitalizedCategory}`;
 
                 return (
-                  <ProductCarousel
-                    key={categoryName}
-                    title={title}
-                    products={products}
-                    currentUserId={session?.user?.id}
-                  />
+                  <div key={categoryName} id={`category-${categoryName.replace(/\s+/g, '-').toLowerCase()}`} style={{ scrollMarginTop: '100px' }}>
+                    <ProductCarousel
+                      title={title}
+                      products={products}
+                      currentUserId={session?.user?.id}
+                    />
+                  </div>
                 );
               })
             )}
@@ -122,8 +134,9 @@ export default async function Home() {
             <ProblemStatement />
           </div>
         </div>
-      </main>
-      <Footer />
+        </main>
+        <Footer />
+      </div>
     </>
   );
 }

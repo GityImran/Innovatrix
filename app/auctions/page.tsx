@@ -1,6 +1,7 @@
 import React from "react";
+import Link from "next/link";
 import Header from "@/app/components/Header/Header";
-import CategoriesNav from "@/app/components/CategoriesNav/CategoriesNav";
+
 import AuctionCard from "@/app/components/Auction/AuctionCard";
 import { connectToDatabase } from "@/lib/mongodb";
 import Auction from "@/models/Auction";
@@ -52,9 +53,14 @@ export default async function AuctionsPage() {
   return (
     <>
       <Header />
-      <CategoriesNav />
+
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#080808', color: '#e2e8f0' }}>
         <main style={{ flex: 1, maxWidth: '1200px', margin: '0 auto', padding: '32px 24px', width: '100%' }}>
+          {/* Back Button */}
+          <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#94a3b8', textDecoration: 'none', marginBottom: '24px', fontSize: '0.9rem', fontWeight: 600, transition: 'color 0.2s' }}>
+            ← Back
+          </Link>
+
           {/* Hero Section */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '48px', flexWrap: 'wrap', gap: '16px' }}>
             <div>

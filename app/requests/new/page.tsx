@@ -1,13 +1,13 @@
 import React from "react";
 import Header from "@/app/components/Header/Header";
-import CategoriesNav from "@/app/components/CategoriesNav/CategoriesNav";
+
 import NewRequestForm from "./NewRequestForm";
 
 export default function NewRequestPage() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#080808', color: '#e2e8f0' }}>
       <Header />
-      <CategoriesNav />
+
 
       <main style={{ flex: 1, maxWidth: '800px', margin: '0 auto', padding: '48px 24px', width: '100%' }}>
         <div style={{ marginBottom: '32px' }}>
