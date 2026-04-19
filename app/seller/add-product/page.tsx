@@ -494,40 +494,6 @@ function AddProductForm() {
             ))}
           </div>
           {errors.condition && <p style={s.errMsg}>{errors.condition}</p>}
-
-          {/* AI Condition Feedback for Seller */}
-          {(aiResult || isVerifying) && (
-            <div style={{
-              marginTop: "1rem",
-              padding: "1rem",
-              borderRadius: "10px",
-              border: `1px solid ${isVerifying ? "#3b82f6" : aiResult?.aiFailed ? "#4b5563" : aiResult?.mismatch ? "#f59e0b" : "#10b981"}`,
-              backgroundColor: `${isVerifying ? "#3b82f610" : aiResult?.aiFailed ? "#4b556310" : aiResult?.mismatch ? "#f59e0b10" : "#10b98110"}`,
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-                <span style={{ fontSize: "1.1rem" }}>
-                  {isVerifying ? "🔍" : aiResult?.aiFailed ? "⚠️" : aiResult?.mismatch ? "⚠️" : "✅"}
-                </span>
-                <p style={{
-                  margin: 0,
-                  fontSize: "0.9rem",
-                  fontWeight: 700,
-                  color: isVerifying ? "#3b82f6" : aiResult?.aiFailed ? "#94a3b8" : aiResult?.mismatch ? "#f59e0b" : "#10b981",
-                }}>
-                  {isVerifying ? "Verifying condition…" : aiResult?.aiFailed ? "AI verification unavailable" : aiResult?.mismatch ? "Please review the condition" : "Condition looks accurate"}
-                </p>
-              </div>
-              <p style={{ margin: 0, fontSize: "0.85rem", color: "#cbd5e1", lineHeight: 1.5 }}>
-                {isVerifying
-                  ? "Analyzing image clarity and wear patterns..."
-                  : aiResult?.aiFailed
-                    ? "We couldn’t verify the item automatically. Your selected condition will be used."
-                    : aiResult?.mismatch
-                      ? `The item appears to be in "${aiResult?.detectedCondition}" condition, but you selected "${condition}". You may want to update the condition to match the item more accurately.`
-                      : "The item appears to match the condition you selected."}
-              </p>
-            </div>
-          )}
         </div>
 
         {/* ════════════ PRICING ════════════ */}
@@ -683,6 +649,40 @@ function AddProductForm() {
                 ))}
               </div>
             </>
+          )}
+
+          {/* AI Condition Feedback — shown below photos so it reads as image-driven feedback */}
+          {(aiResult || isVerifying) && (
+            <div style={{
+              marginTop: "1rem",
+              padding: "1rem",
+              borderRadius: "10px",
+              border: `1px solid ${isVerifying ? "#3b82f6" : aiResult?.aiFailed ? "#4b5563" : aiResult?.mismatch ? "#f59e0b" : "#10b981"}`,
+              backgroundColor: `${isVerifying ? "#3b82f610" : aiResult?.aiFailed ? "#4b556310" : aiResult?.mismatch ? "#f59e0b10" : "#10b98110"}`,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
+                <span style={{ fontSize: "1.1rem" }}>
+                  {isVerifying ? "🔍" : aiResult?.aiFailed ? "⚠️" : aiResult?.mismatch ? "⚠️" : "✅"}
+                </span>
+                <p style={{
+                  margin: 0,
+                  fontSize: "0.9rem",
+                  fontWeight: 700,
+                  color: isVerifying ? "#3b82f6" : aiResult?.aiFailed ? "#94a3b8" : aiResult?.mismatch ? "#f59e0b" : "#10b981",
+                }}>
+                  {isVerifying ? "Verifying condition…" : aiResult?.aiFailed ? "AI verification unavailable" : aiResult?.mismatch ? "Please review the condition" : "Condition looks accurate"}
+                </p>
+              </div>
+              <p style={{ margin: 0, fontSize: "0.85rem", color: "#cbd5e1", lineHeight: 1.5 }}>
+                {isVerifying
+                  ? "Analyzing image clarity and wear patterns..."
+                  : aiResult?.aiFailed
+                    ? "We couldn't verify the item automatically. Your selected condition will be used."
+                    : aiResult?.mismatch
+                      ? `The item appears to be in "${aiResult?.detectedCondition}" condition, but you selected "${condition}". You may want to update the condition to match the item more accurately.`
+                      : "The item appears to match the condition you selected."}
+              </p>
+            </div>
           )}
         </div>
 
