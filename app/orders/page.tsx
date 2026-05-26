@@ -175,6 +175,8 @@ export default function BuyerOrdersPage() {
           const meta = STATUS_META[order.status];
           const sellerName = order.sellerId?.name || "Unknown Seller";
           const imageUrl = order.item?.image?.url;
+          const isAuction = order.itemModel === "Auction";
+          const itemDetailUrl = isAuction ? `/auction/${order.itemId}` : `/product/${order.itemId}`;
 
           return (
             <div key={order._id} className="order-card" style={{ 
@@ -261,17 +263,24 @@ export default function BuyerOrdersPage() {
 
                 {/* Info Section */}
                 <div style={{ flex: 1, minWidth: "260px" }}>
-                  <h3 style={{ fontSize: "20px", fontWeight: 800, color: "#f8fafc", margin: "0 0 6px 0" }}>{order.item?.title || "Product Listing"}</h3>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
-                    <span style={{ fontSize: "13px", fontWeight: 600, color: "#94a3b8", background: "rgba(255,255,255,0.04)", padding: "3px 10px", borderRadius: "6px" }}>
-                      {order.item?.category}
-                    </span>
+                  <h3 style={{ fontSize: "20px", fontWeight: 800, color: "#f8fafc", margin: "0 0 6px 0" }}>{order.item?.title || "Item Listing"}</h3>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px", flexWrap: "wrap" }}>
+                    {isAuction && (
+                      <span style={{ fontSize: "11px", fontWeight: 800, color: "#10b981", background: "rgba(16,185,129,0.1)", padding: "3px 10px", borderRadius: "6px", border: "1px solid rgba(16,185,129,0.2)" }}>
+                        🔨 Auction Won
+                      </span>
+                    )}
+                    {order.item?.category && (
+                      <span style={{ fontSize: "13px", fontWeight: 600, color: "#94a3b8", background: "rgba(255,255,255,0.04)", padding: "3px 10px", borderRadius: "6px" }}>
+                        {order.item.category}
+                      </span>
+                    )}
                     <span style={{ fontSize: "13px", fontWeight: 600, color: "#64748b" }}>•</span>
                     <span style={{ fontSize: "13px", fontWeight: 600, color: "#64748b" }}>Seller: {sellerName}</span>
                   </div>
 
                   <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-                    <Link href={`/product/${order.itemId}`} className="action-btn" style={{ 
+                    <Link href={itemDetailUrl} className="action-btn" style={{ 
                       textDecoration: "none",
                       padding: "10px 20px", 
                       borderRadius: "12px", 
@@ -282,7 +291,7 @@ export default function BuyerOrdersPage() {
                       border: "1px solid rgba(245,158,11,0.2)",
                       transition: "all 0.2s"
                     }}>
-                      View Product
+                      {isAuction ? "View Auction" : "View Product"}
                     </Link>
                     
                     {order.status === "completed" && (

@@ -102,6 +102,13 @@ export default function SustainabilityPage() {
 
   return (
     <div className={styles.container}>
+      {/* Back Button */}
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 24px 0', width: '100%' }}>
+        <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#94a3b8', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 600, transition: 'color 0.2s' }}>
+          ← Back
+        </Link>
+      </div>
+
       {/* Hero Section */}
       <section className={styles.hero}>
 

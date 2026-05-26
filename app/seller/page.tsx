@@ -10,6 +10,7 @@ import { redirect } from "next/navigation";
 import { connectToDatabase } from "@/lib/mongodb";
 import Product from "@/models/Product";
 import Order from "@/models/Order";
+import "@/models/Auction"; // ensure Auction schema is registered (referenced via Order population)
 
 const QUICK_LINKS = [
   { href: "/seller/add-product", icon: "➕", label: "Add Product", desc: "List a new item for sale" },

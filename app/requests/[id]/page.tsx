@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import Header from "@/app/components/Header/Header";
-import CategoriesNav from "@/app/components/CategoriesNav/CategoriesNav";
+
 import RequestDetails from "./RequestDetails";
 import { connectToDatabase } from "@/lib/mongodb";
 import Request from "@/models/Request";
@@ -34,7 +34,7 @@ export default async function RequestDetailsPage({ params }: { params: Promise<{
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#080808', color: '#e2e8f0' }}>
       <Header />
-      <CategoriesNav />
+
 
       <main style={{ flex: 1, maxWidth: '1000px', margin: '0 auto', padding: '32px 24px', width: '100%' }}>
         <nav style={{ marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '8px' }}>

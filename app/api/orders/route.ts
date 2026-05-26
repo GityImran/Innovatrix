@@ -70,7 +70,16 @@ export async function GET(req: NextRequest) {
         } else if (order.itemModel === "RentItem") {
           itemInfo = await RentItem.findById(order.itemId).select("title category image");
         } else if (order.itemModel === "Auction") {
-          itemInfo = await Auction.findById(order.itemId).select("title category image");
+          const auction = await Auction.findById(order.itemId).select("productTitle category images");
+          if (auction) {
+            // Normalize Auction fields to the common { title, category, image } shape the UI expects
+            itemInfo = {
+              _id: auction._id,
+              title: auction.productTitle,
+              category: auction.category,
+              image: auction.images && auction.images.length > 0 ? { url: auction.images[0] } : null,
+            };
+          }
         }
 
         const orderObj = order.toObject();

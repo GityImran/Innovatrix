@@ -49,17 +49,18 @@ export default async function AuctionPage({ params }: { params: Promise<{ id: st
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white">
+    <>
       <Header />
       <CategoriesNav />
-
-      <main className="container mx-auto px-4 py-12">
-        <AuctionDetailClient
-          initialAuction={data.auction}
-          initialBids={data.bids}
-          session={session}
-        />
-      </main>
-    </div>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#080808', color: '#e2e8f0' }}>
+        <main style={{ flex: 1, maxWidth: '1200px', margin: '0 auto', padding: '32px 24px', width: '100%' }}>
+          <AuctionDetailClient
+            initialAuction={data.auction}
+            initialBids={data.bids}
+            session={session}
+          />
+        </main>
+      </div>
+    </>
   );
 }

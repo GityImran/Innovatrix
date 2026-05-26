@@ -18,6 +18,9 @@ const PAGE_TITLES: Record<string, string> = {
   "/seller/orders": "Orders",
   "/seller/earnings": "Earnings",
   "/seller/settings": "Settings",
+  "/seller/auctions": "My Auctions",
+  "/seller/auctions/create": "Create Auction",
+  "/trade": "Trading Hub",
 };
 
 export default function SellerLayout({

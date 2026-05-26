@@ -4,7 +4,7 @@ import Request from "@/models/Request";
 import { auth } from "@/lib/auth";
 import RequestsClient from "./RequestsClient";
 import Header from "@/app/components/Header/Header";
-import CategoriesNav from "@/app/components/CategoriesNav/CategoriesNav";
+
 import Notification from "@/models/Notification";
 
 export default async function RequestsPage() {
@@ -25,7 +25,7 @@ export default async function RequestsPage() {
   return (
     <Suspense fallback={<div>Loading requests...</div>}>
       <Header />
-      <CategoriesNav />
+
       <RequestsClient 
         initialRequests={JSON.parse(JSON.stringify(requests))} 
         currentUserId={currentUserId}

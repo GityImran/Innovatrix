@@ -17,7 +17,7 @@ export interface IAuction extends Document {
   reservePrice?: number;
 
   endTime: Date;
-  status: "active" | "ended";
+  status: "active" | "ended" | "sold";
 
   createdAt: Date;
   updatedAt: Date;
@@ -41,7 +41,7 @@ const AuctionSchema = new Schema<IAuction>(
     reservePrice: Number,
 
     endTime: { type: Date, required: true },
-    status: { type: String, enum: ["active", "ended"], default: "active" },
+    status: { type: String, enum: ["active", "ended", "sold"], default: "active" },
   },
   { timestamps: true }
 );

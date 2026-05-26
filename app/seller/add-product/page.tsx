@@ -69,6 +69,8 @@ function AddProductForm() {
   const [isUrgent, setIsUrgent] = useState(false);
   const [isBundle, setIsBundle] = useState(false);
   const [bundleTitle, setBundleTitle] = useState("");
+  const [isTradeEnabled, setIsTradeEnabled] = useState(false);
+  const [tradePreferences, setTradePreferences] = useState("");
   const [errors, setErrors] = useState<FormErrors>({});
   const [isDragging, setIsDragging] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -231,6 +233,10 @@ function AddProductForm() {
           isUrgent,
           isBundle,
           bundleTitle: isBundle ? bundleTitle.trim() : undefined,
+          isTradeEnabled,
+          tradePreferences: isTradeEnabled && tradePreferences.trim()
+            ? tradePreferences.split(",").map((p) => p.trim()).filter(Boolean)
+            : [],
           status: "active",
         }),
       });
@@ -295,6 +301,10 @@ function AddProductForm() {
           isUrgent,
           isBundle,
           bundleTitle: isBundle ? bundleTitle : undefined,
+          isTradeEnabled,
+          tradePreferences: isTradeEnabled && tradePreferences.trim()
+            ? tradePreferences.split(",").map((p) => p.trim()).filter(Boolean)
+            : [],
           status: "draft",
         }),
       });
@@ -484,40 +494,6 @@ function AddProductForm() {
             ))}
           </div>
           {errors.condition && <p style={s.errMsg}>{errors.condition}</p>}
-
-          {/* AI Condition Feedback for Seller */}
-          {(aiResult || isVerifying) && (
-            <div style={{
-              marginTop: "1rem",
-              padding: "1rem",
-              borderRadius: "10px",
-              border: `1px solid ${isVerifying ? "#3b82f6" : aiResult?.aiFailed ? "#4b5563" : aiResult?.mismatch ? "#f59e0b" : "#10b981"}`,
-              backgroundColor: `${isVerifying ? "#3b82f610" : aiResult?.aiFailed ? "#4b556310" : aiResult?.mismatch ? "#f59e0b10" : "#10b98110"}`,
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-                <span style={{ fontSize: "1.1rem" }}>
-                  {isVerifying ? "🔍" : aiResult?.aiFailed ? "⚠️" : aiResult?.mismatch ? "⚠️" : "✅"}
-                </span>
-                <p style={{
-                  margin: 0,
-                  fontSize: "0.9rem",
-                  fontWeight: 700,
-                  color: isVerifying ? "#3b82f6" : aiResult?.aiFailed ? "#94a3b8" : aiResult?.mismatch ? "#f59e0b" : "#10b981",
-                }}>
-                  {isVerifying ? "Verifying condition…" : aiResult?.aiFailed ? "AI verification unavailable" : aiResult?.mismatch ? "Please review the condition" : "Condition looks accurate"}
-                </p>
-              </div>
-              <p style={{ margin: 0, fontSize: "0.85rem", color: "#cbd5e1", lineHeight: 1.5 }}>
-                {isVerifying
-                  ? "Analyzing image clarity and wear patterns..."
-                  : aiResult?.aiFailed
-                    ? "We couldn’t verify the item automatically. Your selected condition will be used."
-                    : aiResult?.mismatch
-                      ? `The item appears to be in "${aiResult?.detectedCondition}" condition, but you selected "${condition}". You may want to update the condition to match the item more accurately.`
-                      : "The item appears to match the condition you selected."}
-              </p>
-            </div>
-          )}
         </div>
 
         {/* ════════════ PRICING ════════════ */}
@@ -674,6 +650,40 @@ function AddProductForm() {
               </div>
             </>
           )}
+
+          {/* AI Condition Feedback — shown below photos so it reads as image-driven feedback */}
+          {(aiResult || isVerifying) && (
+            <div style={{
+              marginTop: "1rem",
+              padding: "1rem",
+              borderRadius: "10px",
+              border: `1px solid ${isVerifying ? "#3b82f6" : aiResult?.aiFailed ? "#4b5563" : aiResult?.mismatch ? "#f59e0b" : "#10b981"}`,
+              backgroundColor: `${isVerifying ? "#3b82f610" : aiResult?.aiFailed ? "#4b556310" : aiResult?.mismatch ? "#f59e0b10" : "#10b98110"}`,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
+                <span style={{ fontSize: "1.1rem" }}>
+                  {isVerifying ? "🔍" : aiResult?.aiFailed ? "⚠️" : aiResult?.mismatch ? "⚠️" : "✅"}
+                </span>
+                <p style={{
+                  margin: 0,
+                  fontSize: "0.9rem",
+                  fontWeight: 700,
+                  color: isVerifying ? "#3b82f6" : aiResult?.aiFailed ? "#94a3b8" : aiResult?.mismatch ? "#f59e0b" : "#10b981",
+                }}>
+                  {isVerifying ? "Verifying condition…" : aiResult?.aiFailed ? "AI verification unavailable" : aiResult?.mismatch ? "Please review the condition" : "Condition looks accurate"}
+                </p>
+              </div>
+              <p style={{ margin: 0, fontSize: "0.85rem", color: "#cbd5e1", lineHeight: 1.5 }}>
+                {isVerifying
+                  ? "Analyzing image clarity and wear patterns..."
+                  : aiResult?.aiFailed
+                    ? "We couldn't verify the item automatically. Your selected condition will be used."
+                    : aiResult?.mismatch
+                      ? `The item appears to be in "${aiResult?.detectedCondition}" condition, but you selected "${condition}". You may want to update the condition to match the item more accurately.`
+                      : "The item appears to match the condition you selected."}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* ════════════ ADVANCED ════════════ */}
@@ -748,6 +758,46 @@ function AddProductForm() {
                 style={s.input}
                 onFocus={(e) => Object.assign(e.target.style, s.focusStyle)}
                 onBlur={(e) => Object.assign(e.target.style, s.input)}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* ════════════ TRADE SETTINGS ════════════ */}
+        <div style={s.card}>
+          <p style={s.cardHeading}>🔁 Trade Settings</p>
+
+          {/* Enable Trade toggle */}
+          <div style={s.advRow}>
+            <div style={{ flex: 1 }}>
+              <p style={s.advTitle}>🔁 Enable for Trade</p>
+              <p style={s.advSub}>Allow other students to propose a trade for this item</p>
+            </div>
+            <button
+              type="button"
+              style={{ ...s.toggle, ...(isTradeEnabled ? s.toggleOn : s.toggleOff) }}
+              onClick={() => setIsTradeEnabled((p) => !p)}
+              aria-pressed={isTradeEnabled}
+            >
+              <span style={{ ...s.toggleKnob, ...(isTradeEnabled ? s.toggleKnobOn : {}) }} />
+            </button>
+          </div>
+
+          {/* Trade preferences textarea */}
+          {isTradeEnabled && (
+            <div style={{ marginTop: "1rem", animation: "fadeInUp 0.3s ease" }}>
+              <label style={s.label} htmlFor="ap-trade-pref">
+                What are you looking for? <span style={s.optional}>— optional, comma-separated</span>
+              </label>
+              <textarea
+                id="ap-trade-pref"
+                rows={2}
+                placeholder="e.g. Lab coat, Scientific calculator, Data structures book"
+                value={tradePreferences}
+                onChange={(e) => setTradePreferences(e.target.value)}
+                style={s.textarea}
+                onFocus={(e) => Object.assign(e.target.style, { ...s.textarea, ...s.focusStyle })}
+                onBlur={(e) => Object.assign(e.target.style, s.textarea)}
               />
             </div>
           )}

@@ -25,9 +25,20 @@ export async function GET(req: NextRequest) {
       orders.map(async (order) => {
         let itemInfo = null;
         if (order.itemModel === "Product") {
-          itemInfo = await mongoose.model("Product").findById(order.itemId).select("title category images");
-        } else {
-          itemInfo = await mongoose.model("RentItem").findById(order.itemId).select("title category images");
+          itemInfo = await mongoose.model("Product").findById(order.itemId).select("title category images image");
+        } else if (order.itemModel === "RentItem") {
+          itemInfo = await mongoose.model("RentItem").findById(order.itemId).select("title category images image");
+        } else if (order.itemModel === "Auction") {
+          const auction = await mongoose.model("Auction").findById(order.itemId).select("productTitle category images");
+          if (auction) {
+            // Normalize Auction fields to the common { title, category, image } shape used by the UI
+            itemInfo = {
+              _id: auction._id,
+              title: auction.productTitle,
+              category: auction.category,
+              image: auction.images && auction.images.length > 0 ? { url: auction.images[0] } : null,
+            };
+          }
         }
         
         const orderObj = order.toObject();
